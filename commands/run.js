@@ -11,15 +11,12 @@ const dotenv          = require('dotenv');
 const randomstring    = require('randomstring');
 const path            = require('path');
 
-const syncfile = 'syncfile.json';
-const synclocalfile = '.synclocal';
+const syncfile        = 'syncfile.json';
+const synclocalfile   = '.synclocal';
 
 var sync_config = {};
-
 var heroku = {};
-
 var silent = true;
-
 var tmp_mysql_db = {};
 
 function confirmPrompt (msg) {
@@ -215,18 +212,6 @@ function getEnvDatabaseConfig () {
     return env_config_file;
 }
 
-function recursiveJsonReplace (data, from, to) {
-    for(let d in data) {
-        if(typeof data[d] == 'string') {
-            let regex = new RegExp(escape_regexp(from), 'g');
-            data[d] = data[d].replace(regex, to);
-        } else if(typeof data[d] == 'object') {
-            data[d] = recursiveJsonReplace(data[d], from, to);
-        }
-    }
-    return data;
-}
-
 function configHasOption (config, option) {
     if(config.options) {
         for(let o in config.options) {
@@ -247,7 +232,7 @@ function colorEnv (env, app) {
 function * run (context, h) {
     heroku = h;
     var silent = true;
-    
+
     if(!fs.existsSync(syncfile)) {
         return cli.error(`Sync file (${syncfile}) does not exist.`);
     }
@@ -327,7 +312,7 @@ function * run (context, h) {
 
     var use_git = false;
     for(let t in tos) {
-        
+
         cli.log(`- ${colorEnv(tos[t].name, tos[t].app)}`);
 
         if(tos[t].git != undefined) {
@@ -408,7 +393,7 @@ function * run (context, h) {
 
         if(tos[t].db.password)
             to_mysql_auth += `-p${tos[t].db.password}`;
-        
+
         shell.exec(`mysql ${to_mysql_auth} ${tos[t].db.database} < ${to_tmpfile.name}`, {silent : silent});
 
         if(tos[t].redis != undefined) {
@@ -444,7 +429,7 @@ function * run (context, h) {
 module.exports = {
     topic : 'sync',
     command : 'run',
-    description : 'Run the sync. syncfile.json must be set.',
+    description : 'Run the sync. "syncfile.json" must be created (heroku sync:init).',
     help : 'It uses the syncfile.json to sync databases.',
     needsAuth: true,
     args : [

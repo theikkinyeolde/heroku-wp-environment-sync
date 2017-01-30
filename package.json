@@ -1,5 +1,5 @@
 {
-  "name": "heroku-environment-sync",
+  "name": "heroku-wp-environment-sync",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
