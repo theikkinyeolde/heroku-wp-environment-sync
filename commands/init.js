@@ -14,10 +14,10 @@ function * run (context, heroku) {
 
     var syncfile_template = {
         "name" : "",
-        "defaultsetup" : "default",
+        "defaultsetup" : "local",
         "setups" : [
             {
-                "name" : "default",
+                "name" : "staging",
                 "from" : "production",
                 "to"   : "staging"
             },
@@ -30,10 +30,7 @@ function * run (context, heroku) {
         "environments" : [
             {
                 "name" : "production",
-                "app" : "",
-                "replaces" : [
-                    []
-                ]
+                "app" : ""
             },
             {
                 "name" : "staging",

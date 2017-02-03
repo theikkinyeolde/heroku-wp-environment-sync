@@ -289,7 +289,7 @@ function * run (context, h) {
         return cli.error(`Could not find setup configuration with setup ${setup}.`);
     }
 
-    var from = yield getEnvironmentObject(setup_config.from);
+    var from = yield getEnvironmentObject(setup_config.from, false);
     var tos = [];
 
     if(!from) {
@@ -298,10 +298,10 @@ function * run (context, h) {
 
     if(typeof setup_config.to == 'object') {
         for(let t in setup_config.to) {
-            tos.push(yield getEnvironmentObject(setup_config.to[t]));
+            tos.push(yield getEnvironmentObject(setup_config.to[t], true));
         }
     } else  if(typeof setup_config.to == 'string') {
-        tos.push(yield getEnvironmentObject(setup_config.to));
+        tos.push(yield getEnvironmentObject(setup_config.to, true));
     }
 
     cli.log();
