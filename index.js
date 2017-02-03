@@ -6,6 +6,6 @@ exports.topic = {
 }
 
 exports.commands = [
-    require('./commands/run.js'),
+    require('./commands/dbsync.js'),
     require('./commands/init.js')
 ]
