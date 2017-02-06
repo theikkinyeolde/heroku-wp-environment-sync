@@ -1,8 +1,9 @@
-var fs = require('fs');
-var jsonfile = require('jsonfile');
-var co = require('co');
-var cli = require('heroku-cli-util');
-var path = require('path');
+const fs          = require('fs');
+const jsonfile    = require('jsonfile');
+const co          = require('co');
+const cli         = require('heroku-cli-util');
+const path        = require('path');
+const library     = require('../library/library.js');
 
 var syncfile = 'syncfile.json';
 

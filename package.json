@@ -6,15 +6,16 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository" : {
-      "type" : "git",
-      "url" : "https://github.com/taneliheikkinen/heroku-wp-environment-sync.git"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/taneliheikkinen/heroku-wp-environment-sync.git"
   },
-  "url" : "https://github.com/taneliheikkinen/heroku-wp-environment-sync",
+  "url": "https://github.com/taneliheikkinen/heroku-wp-environment-sync",
   "author": "Taneli Heikkinen",
   "license": "MIT",
   "dependencies": {
     "co": "^4.6.0",
+    "dateformat": "^2.0.0",
     "dotenv": "^4.0.0",
     "heroku-cli-util": "^6.1.1",
     "jsonfile": "^2.4.0",

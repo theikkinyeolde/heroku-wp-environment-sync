@@ -1,7 +1,5 @@
 'use strict'
-
 const fs              = require('fs');
-const jsonfile        = require('jsonfile');
 const cli             = require('heroku-cli-util');
 const co              = require('co');
 const dburl           = require('parse-db-url');
@@ -11,6 +9,9 @@ const dotenv          = require('dotenv');
 const randomstring    = require('randomstring');
 const path            = require('path');
 
+const library         = require('../library/library.js');
+const colorEnv        = library.colorEnv;
+
 const syncfile        = 'syncfile.json';
 const synclocalfile   = '.synclocal';
 
@@ -19,38 +20,18 @@ var heroku = {};
 var silent = true;
 var tmp_mysql_db = {};
 
-function confirmPrompt (msg) {
-    return co(function * () {
-        msg = msg + " (yes)";
-
-        let confirmation = yield cli.prompt(msg);
-
-        confirmation = confirmation.toLowerCase();
-
-        if(confirmation == "yes") {
-            return yield Promise.resolve(true);
-        } else {
-            return yield Promise.resolve(false);
-        }
-    });
-}
-
 function getEnvironmentObject (env, sync_to) {
     return co(function * () {
-        if(!getEnvironmentConfig(env)) {
-            return cli.error(`No environment with the name ${env} exists.`);
-        }
-
         var output_object = {
             name : env
         };
 
         var env_name = `${cli.color.yellow(env)}`;
 
-        var config = getEnvironmentConfig(env);
+        var config = library.getEnvironmentConfig(env, sync_config);
 
         if(!config) {
-            return cli.error(`Did not find environment with the name ${env_name}.`);
+            return config;
         }
 
         if(config.app != undefined) {
@@ -69,8 +50,8 @@ function getEnvironmentObject (env, sync_to) {
         if(config.app != undefined && config.app != '') {
             heroku_config_vars = yield heroku.get(`/apps/${config.app}/config-vars`);
             heroku_config = yield heroku.get(`/apps/${config.app}`);
-            output_object.db = dburl(getDatabaseUrlFromConfig(heroku_config_vars, config.app));
-        } else if(configHasOption(config, "use_local_db")){
+            output_object.db = dburl(library.getDatabaseUrlFromConfig(heroku_config_vars, config.app, sync_config));
+        } else if(library.configHasOption(config, "use_local_db")){
             let env_config = getEnvDatabaseConfig();
 
             let pass = '';
@@ -107,42 +88,6 @@ function getEnvironmentObject (env, sync_to) {
     });
 }
 
-function getEnvironmentConfig (env) {
-    for(let c in sync_config.environments) {
-        if(!sync_config.environments[c])
-            continue;
-
-        if(env == sync_config.environments[c].name) {
-            return sync_config.environments[c];
-        }
-    }
-    return false;
-}
-
-function getDatabaseUrlFromConfig (config, app) {
-    var url = '';
-
-    if(sync_config.db) {
-        if(sync_config.db == 'jaws') {
-            url = config.JAWSDB_URL;
-        } else if(sync_config.db == 'cleardb') {
-            url = config.CLEARDB_DATABASE_URL;
-        } else {
-            return cli.error("Unknown database specified in the sync file.");
-        }
-    } else if(config.JAWSDB_URL != undefined) {
-        url = config.JAWSDB_URL;
-    } else if(config.CLEARDB_DATABASE_URL != undefined) {
-        url = config.CLEARDB_DATABASE_URL;
-    }
-
-    if(url.length == 0) {
-        return cli.error(`No database url specified in the ${cli.color.app(app)} -application.`);
-    }
-
-    return url;
-}
-
 function getEnvDatabaseConfig () {
     let env_config_file = {parsed : {}};
     let synclocal_used = false;
@@ -171,29 +116,14 @@ function getEnvDatabaseConfig () {
     return env_config_file;
 }
 
-function configHasOption (config, option) {
-    if(config.options) {
-        for(let o in config.options) {
-            if(config.options[o] == option)
-                return true;
-        }
-    }
-    return false;
-}
-
-function colorEnv (env, app) {
-    if(!app)
-        return `${cli.color.yellow(env)}`;
-
-    return `${cli.color.yellow(env)} (${cli.color.app(app)})`;
-}
-
 function * run (context, h) {
     heroku = h;
     var silent = true;
 
-    if(!fs.existsSync(syncfile)) {
-        return cli.error(`Sync file (${syncfile}) does not exist.`);
+    sync_config = library.getSyncFile(syncfile);
+
+    if(!sync_config) {
+        return sync_config;
     }
 
     var setup = context.args.setup;
@@ -212,8 +142,6 @@ function * run (context, h) {
     if(!env_config_file) {
         return cli.error(`Could not get the required fields from the local file.`);
     }
-
-    sync_config = jsonfile.readFileSync(syncfile);
 
     if(sync_config.environments == undefined || !sync_config.environments.length) {
         return cli.error(`No environments defined, exiting.`);
@@ -294,7 +222,7 @@ function * run (context, h) {
 
     }
 
-    if(yield confirmPrompt('Are you ok with this?')) {
+    if(yield library.confirmPrompt('Are you ok with this?')) {
         cli.log(`Ok! Let's do this!`);
     } else {
         cli.log(`No sweat! Some other time then!`);
