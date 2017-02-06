@@ -28,6 +28,22 @@ Then you need to edit your syncfile.json to correspond the different environment
 ]
 ```
 
+In the syncfile, you need to set the environments that you can sync to as mutable.
+Like so:
+```
+{
+    "name": "production",
+    "app": "production-app"
+},
+{
+    "name": "staging",
+    "app": "staging-app",
+    "mutable": true
+}
+```
+
+### Syncing
+
 To sync your default setup (which, if you created the syncfile using heroku sync:init, is the local), use:
 ```
 heroku sync:dbsync
@@ -43,16 +59,19 @@ You can also use --to and --from to specify locations, bypassing the setups enti
 heroku sync:dbsync --from from_environment_name --to to_environment_name
 ```
 
-In the syncfile, you need to set the environments that you can sync to as mutable.
-Like so:
+### Dump
+
+To dump a database from an environment in the syncfile, use:
 ```
-{
-    "name": "production",
-    "app": "production-app"
-},
-{
-    "name": "staging",
-    "app": "staging-app",
-    "mutable": true
-}
+heroku sync:dump environment_name
+```
+
+You can also specify just a app and bypass the syncfile:
+```
+heroku sync:dump --app heroku_app_name
+```
+
+Or you can just paste a mysql url, like so:
+```
+heroku sync:dump --mysql-url mysql://test:test@test.com/test_db
 ```
