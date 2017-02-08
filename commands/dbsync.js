@@ -204,10 +204,20 @@ function * run (context, h) {
 
     if(typeof setup_config.to == 'object') {
         for(let t in setup_config.to) {
-            tos.push(yield getEnvironmentObject(setup_config.to[t], true));
+            let envconf = yield getEnvironmentObject(setup_config.to[t], true);
+
+            if(envconf)
+                tos.push(envconf);
         }
     } else  if(typeof setup_config.to == 'string') {
-        tos.push(yield getEnvironmentObject(setup_config.to, true));
+        let envconf = yield getEnvironmentObject(setup_config.to, true);
+
+        if(envconf)
+            tos.push(envconf);
+    }
+
+    if(!tos.length) {
+        return cli.error(`Error in the configuration of the destination of the sync.`);
     }
 
     cli.log();
@@ -217,9 +227,7 @@ function * run (context, h) {
     cli.log(`I'm going to put that database after search and replace to these places:`);
 
     for(let t in tos) {
-
         cli.log(`- ${colorEnv(tos[t].name, tos[t].app)}`);
-
     }
 
     if(yield library.confirmPrompt('Are you ok with this?')) {
