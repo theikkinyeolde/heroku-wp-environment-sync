@@ -59,7 +59,7 @@ You can also use --to and --from to specify locations, bypassing the setups enti
 heroku sync:dbsync --from from_environment_name --to to_environment_name
 ```
 
-### Dump
+### Dumping
 
 To dump a database from an environment in the syncfile, use:
 ```
