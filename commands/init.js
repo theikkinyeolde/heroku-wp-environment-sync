@@ -13,8 +13,21 @@ function * run (context, heroku) {
         return cli.error(`Syncfile already exists.`);
     }
 
+    var name = yield cli.prompt("Name of the sync configuration");
+
+    var prod_app = yield cli.prompt("App of the production environment");
+
+    var produrl = yield cli.prompt("Production url (www.domain.com)");
+    var localurl = yield cli.prompt("Localhost url (localhost:5000)");
+
+    var replaces = [];
+
+    replaces.push(["https://" + produrl, "http://" + localurl]);
+    replaces.push(["http://" + produrl, "http://" + localurl]);
+    replaces.push([produrl, localurl]);
+
     var syncfile_template = {
-        "name" : "",
+        "name" : name,
         "defaultsetup" : "local",
         "setups" : [
             {
@@ -31,7 +44,7 @@ function * run (context, heroku) {
         "environments" : [
             {
                 "name" : "production",
-                "app" : ""
+                "app" : prod_app
             },
             {
                 "name" : "staging",
@@ -44,9 +57,7 @@ function * run (context, heroku) {
             {
                 "name" : "localhost",
                 "mutable" : true,
-                "replaces" : [
-                    []
-                ],
+                "replaces" : replaces,
                 "options" : [
                     "use_local_db"
                 ]

@@ -75,20 +75,96 @@ function validateDatabaseObject (object) {
     return true;
 }
 
-function confirmPrompt (msg) {
-    return co(function * () {
-        msg = msg + " (yes)";
+var cmd = {
+    show : true,
+    force : false,
 
-        let confirmation = yield cli.prompt(msg);
-
-        confirmation = confirmation.toLowerCase();
-
-        if(confirmation == "yes") {
-            return yield Promise.resolve(true);
-        } else {
-            return yield Promise.resolve(false);
+    setShow : function (show) {
+        if(show == undefined) {
+            show = false;
         }
-    });
+
+        this.show = show;
+    },
+
+    setForce : function (force) {
+        if(force == undefined) {
+            force = false;
+        }
+
+        this.force = force;
+    },
+
+    log : function (msg) {
+        if(!this.show)
+            return;
+
+        if(!msg)
+            msg = "";
+
+        cli.log(msg);
+    },
+
+    noLog : function (msg) {
+        if(this.show)
+            return;
+
+        if(!msg)
+            msg = "";
+
+        cli.log(msg);
+    },
+
+    debug : function (msg) {
+        if(!this.show)
+            return;
+
+        if(!msg)
+            msg = "";
+
+        cli.debug(msg);
+    },
+
+    warn : function (msg) {
+        if(!this.show)
+            return;
+
+        if(!msg)
+            msg = "";
+
+        cli.warn(msg);
+    },
+
+    header : function (msg) {
+        if(!this.show)
+            return;
+
+        if(!msg)
+            msg = "";
+
+        cli.styledHeader(msg);
+    },
+
+    confirmPrompt : function (msg) {
+        if(this.force)
+            return co(function * () {
+                return yield Promise.resolve(true);
+            });
+
+        return co(function * () {
+            msg = msg + " (yes)";
+
+            let confirmation = yield cli.prompt(msg);
+
+            confirmation = confirmation.toLowerCase();
+
+            if(confirmation == "yes") {
+                return yield Promise.resolve(true);
+            } else {
+                return yield Promise.resolve(false);
+            }
+        });
+    }
 }
 
 module.exports = {
@@ -97,6 +173,6 @@ module.exports = {
     configHasOption : configHasOption,
     getSyncFile : getSyncFile,
     colorEnv : colorEnv,
-    confirmPrompt : confirmPrompt,
+    cmd : cmd,
     validateDatabaseObject : validateDatabaseObject
 }

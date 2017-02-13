@@ -8,5 +8,6 @@ exports.topic = {
 exports.commands = [
     require('./commands/dbsync.js'),
     require('./commands/init.js'),
-    require('./commands/dump.js')
+    require('./commands/dump.js'),
+    require('./commands/connect.js')
 ]

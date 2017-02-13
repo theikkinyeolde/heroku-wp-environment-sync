@@ -12,9 +12,14 @@ const colorEnv      = library.colorEnv;
 
 var silent = true;
 
+var cmd = library.cmd;
+
 const syncfile  = 'syncfile.json';
 
 function * run (context, heroku) {
+
+    cmd.setShow(!context.flags.hide);
+    cmd.setForce(context.flags.force);
 
     let env, app, environment_config, database, filename_prefix, source;
 
@@ -89,27 +94,31 @@ function * run (context, heroku) {
         location = path.resolve(location);
     }
 
+    cmd.noLog("Dumping database.");
 
-    cli.log();
-    cli.styledHeader("Hey baby, let's make some magic happen.");
-    cli.log(`I will take the mysql dump from ${source}.`);
-    cli.log(`Then I will save it to this location:`);
-    cli.log(`${cli.color.magenta(location)}`);
+    cmd.log();
+    cmd.header("Hello! Let's dump so databases, shall we?");
+    cmd.log(`I will take the mysql dump from ${source}.`);
+    cmd.log(`Then I will save it to this location:`);
+    cmd.log(`${cli.color.magenta(location)}`);
 
-    if(yield library.confirmPrompt('Are you ok with this?')) {
-        cli.log(`Ok, let's start this show!`);
+    if(yield cmd.confirmPrompt('Are you ok with this?')) {
+        cmd.log(`Ok, let's start this show!`);
     } else {
-        cli.log(`Okay, but you'll be back!`);
+        cmd.log(`Okay, but you'll be back!`);
         return;
     }
 
-    cli.log();
-    cli.styledHeader(`Getting the ${source} database.`);
+    cmd.log();
+    cmd.header(`Getting the ${source} database.`);
 
     shell.exec(`mysqldump -u${database.user} -p${database.password} -h${database.host} ${database.database} > ${location}`, {silent : silent});
 
-    cli.log();
-    cli.styledHeader(`It is done now. Bye bye!`);
+    cmd.log();
+    cmd.header(`It is done now. Bye bye!`);
+
+    cmd.noLog("Done.");
+
 }
 
 module.exports = {
@@ -128,21 +137,28 @@ module.exports = {
     flags : [
         {
             name : "file",
-            char : "f",
             description : "The file to which to dump.",
             hasValue : true
         },
         {
             name : "app",
-            char : "a",
             description : "If you just want to take the database dump from an app directly.",
             hasValue : true
         },
         {
             name : "mysql-url",
-            char : "mu",
             description : "If you wan't to override the syncfile and use mysql url directly.",
             hasValue : true
+        },
+        {
+            name : "force",
+            char : "f",
+            description : "Yes to all prompts.",
+            hasValue : false
+        },
+        {
+            name : "hide",
+            description : "Hide all log texts."
         }
     ],
     run : cli.command(co.wrap(run))

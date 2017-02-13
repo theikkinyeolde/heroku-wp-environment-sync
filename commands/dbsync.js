@@ -10,6 +10,7 @@ const randomstring    = require('randomstring');
 const path            = require('path');
 
 const library         = require('../library/library.js');
+
 const colorEnv        = library.colorEnv;
 
 const syncfile        = 'syncfile.json';
@@ -19,6 +20,8 @@ var sync_config = {};
 var heroku = {};
 var silent = true;
 var tmp_mysql_db = {};
+
+var cmd = library.cmd;
 
 function getEnvironmentObject (env, sync_to) {
     return co(function * () {
@@ -126,6 +129,9 @@ function * run (context, h) {
         return sync_config;
     }
 
+    cmd.setShow(!context.flags.hide);
+    cmd.setForce(context.flags.force);
+
     var setup = context.args.setup;
 
     let use_to_from = false;
@@ -153,7 +159,7 @@ function * run (context, h) {
         }
 
         if(setup == undefined) {
-            cli.warn("No setup specified, using the default one.");
+            cmd.warn("No setup specified, using the default one.");
 
             setup = sync_config.defaultsetup;
 
@@ -206,6 +212,7 @@ function * run (context, h) {
         for(let t in setup_config.to) {
             let envconf = yield getEnvironmentObject(setup_config.to[t], true);
 
+
             if(envconf)
                 tos.push(envconf);
         }
@@ -220,29 +227,39 @@ function * run (context, h) {
         return cli.error(`Error in the configuration of the destination of the sync.`);
     }
 
-    cli.log();
-    cli.styledHeader("Let's talk. You and me, baby.");
-    cli.log(`This is what i'm going to do.`);
-    cli.log(`From ${colorEnv(from.name, from.app)} i'm going to get the database.`);
-    cli.log(`I'm going to put that database after search and replace to these places:`);
+    let envs_string = "";
 
     for(let t in tos) {
-        cli.log(`- ${colorEnv(tos[t].name, tos[t].app)}`);
+        if(envs_string.length)
+            envs_string += ", ";
+        envs_string += `${cli.color.yellow(tos[t].name)}`;
     }
 
-    if(yield library.confirmPrompt('Are you ok with this?')) {
-        cli.log(`Ok! Let's do this!`);
+    cmd.noLog(`Syncing from ${colorEnv(from.name, from.app)} to ${envs_string}.`);
+
+    cmd.log();
+    cmd.header("Let's talk.");
+    cmd.log(`This is what i'm going to do.`);
+    cmd.log(`From ${colorEnv(from.name, from.app)} i'm going to get the database.`);
+    cmd.log(`I'm going to put that database after search and replace to these places:`);
+
+    for(let t in tos) {
+        cmd.log(`- ${colorEnv(tos[t].name, tos[t].app)}`);
+    }
+
+    if(yield cmd.confirmPrompt('Are you ok with this?')) {
+        cmd.log(`Ok! Let's do this!`);
     } else {
-        cli.log(`No sweat! Some other time then!`);
+        cmd.log(`No sweat! Some other time then!`);
         return;
     }
 
-    cli.log();
-    cli.styledHeader(`Getting the database from ${cli.color.yellow(from.name)}`);
+    cmd.log();
+    cmd.header(`Getting the database from ${cli.color.yellow(from.name)}`);
 
     var tmpfile = tmp.fileSync();
 
-    cli.log(`Getting the database from ${colorEnv(from.name, from.app)}`);
+    cmd.log(`Getting the database from ${colorEnv(from.name, from.app)}`);
 
     shell.exec(`mysqldump -u${from.db.user} -p${from.db.password} -h${from.db.host} ${from.db.database} > ${tmpfile.name}`, {silent : silent});
 
@@ -252,15 +269,15 @@ function * run (context, h) {
         mysql_command_auth += `-p${tmp_mysql_db.pass}`;
     }
 
-    cli.log(`Creating a temporary database.`);
+    cmd.log(`Creating a temporary database.`);
 
     shell.exec(`mysqladmin ${mysql_command_auth} create ${tmp_mysql_db.db}`);
 
     process.on('SIGINT', function() {});
 
     for(let t in tos) {
-        cli.log();
-        cli.styledHeader(`Syncing ${cli.color.yellow(from.name)}' to '${cli.color.yellow(tos[t].name)}'`);
+        cmd.log();
+        cmd.header(`Syncing ${cli.color.yellow(from.name)}' to '${cli.color.yellow(tos[t].name)}'`);
 
         shell.exec(`mysql ${mysql_command_auth} ${tmp_mysql_db.db} < ${tmpfile.name}`);
 
@@ -279,12 +296,12 @@ function * run (context, h) {
 
             replace_exec_command += `--host ${tmp_mysql_db.host} --db ${tmp_mysql_db.db} --replace ${replace_from} --replace-with ${replace_to}`;
 
-            cli.log(`Replacing "${cli.color.green(replace_from)}" to "${cli.color.green(replace_to)}"`);
+            cmd.log(`Replacing "${cli.color.green(replace_from)}" to "${cli.color.green(replace_to)}"`);
 
             shell.exec(replace_exec_command, {silent : silent});
         }
 
-        cli.log(`Pushing the mysql database to ${colorEnv(to_config.name, to_config.app)}.`);
+        cmd.log(`Pushing the mysql database to ${colorEnv(to_config.name, to_config.app)}.`);
 
         shell.exec(`mysqldump ${mysql_command_auth} ${tmp_mysql_db.db} > ${to_tmpfile.name}`);
 
@@ -296,19 +313,24 @@ function * run (context, h) {
         shell.exec(`mysql ${to_mysql_auth} ${tos[t].db.database} < ${to_tmpfile.name}`, {silent : silent});
 
         if(tos[t].redis != undefined) {
-            cli.log("Redis found. Flushing it.");
+            cmd.log("Redis found. Flushing it.");
 
             shell.exec(`redis-cli -h ${tos[t].redis.host} -p ${tos[t].redis.port} -a ${tos[t].redis.password} flushall`, {silent : silent});
         }
 
     }
 
-    cli.log(`Deleting the temporary database.`);
+    cmd.log(`Deleting the temporary database.`);
+
     shell.exec(`mysql ${mysql_command_auth} -e "drop database ${tmp_mysql_db.db};"`);
 
-    cli.log();
-    cli.styledHeader(`It is done. Mmmm, that felt good.`);
-    cli.log("Now go and make sure all is nice and neat.");
+    cmd.log();
+    cmd.header(`It is done.`);
+    cmd.log("Now go and make sure all is nice and neat.");
+
+    if(context.flags.hide) {
+        cli.log("Done.");
+    }
 }
 
 module.exports = {
@@ -327,15 +349,23 @@ module.exports = {
     flags : [
         {
             name : "from",
-            char : 'f',
             description : "The sync source environment.",
             hasValue : true
         },
         {
             name : "to",
-            char : "t",
             description : "The destination of the sync.",
             hasValue : true
+        },
+        {
+            name : "force",
+            char : "f",
+            description : "No messages, no prompts, just pure execution.",
+            hasValue : false
+        },
+        {
+            name : "hide",
+            description : "Hide all log texts."
         }
     ],
     run : cli.command(co.wrap(run))
