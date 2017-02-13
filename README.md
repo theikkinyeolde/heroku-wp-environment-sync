@@ -75,3 +75,10 @@ Or you can just paste a mysql url, like so:
 ```
 heroku sync:dump --mysql-url mysql://test:test@test.com/test_db
 ```
+
+### Connecting
+
+To connect to a database, simply type:
+```
+heroku sync:connect environment_name
+```
