@@ -17,7 +17,6 @@ var cmd = library.cmd;
 
 const syncfile  = 'syncfile.json';
 
-
 function * run (context, heroku) {
     let connect_to = "";
 
@@ -41,21 +40,16 @@ function * run (context, heroku) {
         if(!env)
             return cli.error(`No environment parameter given.`);
 
-        environment_config = library.getEnvironmentConfig(env, sync_config);
+        environment_config = yield library.getEnvironmentObject(env, false, heroku);
 
         if(!environment_config)
             return environment_config;
 
-        if(!environment_config.app)
-            return cli.error(`No app defined in ${cli.color.yellow(env)}.`);
-
         app = environment_config.app;
 
-        let heroku_config_vars = yield heroku.get(`/apps/${app}/config-vars`);
-        let heroku_config = yield heroku.get(`/apps/${app}`);
-        database = dburl(library.getDatabaseUrlFromConfig(heroku_config_vars, app, sync_config));
+        connect_to = colorEnv(env, app);
 
-        connect_to = `${colorEnv(app, env)}`;
+        database = environment_config.db;
     }
 
     cmd.log();
@@ -66,7 +60,7 @@ function * run (context, heroku) {
     if(database.password)
         parameters.push(`-p${database.password}`);
 
-    parameters.push(`-u${database.user}`);    
+    parameters.push(`-u${database.user}`);
     parameters.push(`-h${database.host}`);
     parameters.push(`${database.database}`);
 

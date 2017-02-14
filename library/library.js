@@ -3,12 +3,109 @@ const dburl     = require('parse-db-url');
 const fs        = require('fs');
 const jsonfile  = require('jsonfile');
 const co        = require('co');
+const dotenv    = require('dotenv');
 
 function colorEnv (env, app) {
     if(!app)
         return `${cli.color.yellow(env)}`;
 
     return `${cli.color.yellow(env)} (${cli.color.app(app)})`;
+}
+
+function getEnvironmentObject (env, sync_to, heroku) {
+    return co(function * () {
+        var output_object = {
+            name : env
+        };
+
+        var env_name = `${cli.color.yellow(env)}`;
+
+        var config = getEnvironmentConfig(env, sync_config);
+
+        if(!config) {
+            return config;
+        }
+
+        if(config.app != undefined) {
+            env_name = colorEnv(env, config.app);
+            output_object.app = config.app;
+        }
+
+        if(sync_to) {
+            if(config.mutable == undefined || !config.mutable) {
+                return cli.error(`Can not sync to the environment ${env_name}. It is not mutable.`);
+            }
+        }
+
+        let heroku_config, heroku_config_vars;
+
+        if(config.app != undefined && config.app != '') {
+            heroku_config_vars = yield heroku.get(`/apps/${config.app}/config-vars`);
+            heroku_config = yield heroku.get(`/apps/${config.app}`);
+            output_object.db = dburl(getDatabaseUrlFromConfig(heroku_config_vars, config.app, sync_config));
+        } else if(configHasOption(config, "use_local_db")){
+            let env_config = getEnvDatabaseConfig();
+
+            let pass = '';
+            if(env_config.parsed.DB_PASS) {
+                pass = env_config.parsed.DB_PASS;
+            }
+
+            output_object.db = {
+                adapter : "mysql",
+                host : env_config.parsed.DB_HOST,
+                database : env_config.parsed.DB_NAME,
+                user : env_config.parsed.DB_USER,
+                pass : pass
+            };
+        } else {
+            return cli.error(`Environment ${cli.color.yellow(env)} doesn't have a app defined, or it isn't a local.`);
+        }
+
+        if(output_object.db == undefined) {
+            return cli.error(`Could not get the database info for ${env_name}`);
+        }
+
+        if(config.app) {
+            if(heroku_config_vars.REDIS_URL != undefined) {
+                output_object.redis = dburl(heroku_config_vars.REDIS_URL);
+            }
+        }
+
+        if(config.replaces != undefined && config.replaces.length) {
+            output_object.replaces = config.replaces;
+        }
+
+        return yield Promise.resolve(output_object);
+    });
+}
+
+function getEnvDatabaseConfig (envfile) {
+    let env_config_file = {parsed : {}};
+    let synclocal_used = false;
+
+    if(fs.existsSync(envfile)) {
+        env_config_file = dotenv.config({
+            'path' : './' + envfile
+        });
+
+        synclocal_used = true;
+    } else if(!fs.existsSync('.env')) {
+        return cli.error("Project has no .synclocal or .env file.");
+    } else {
+        env_config_file = dotenv.config();
+    }
+
+    if(env_config_file.parsed.DB_USER == undefined || env_config_file.parsed.DB_HOST == undefined || env_config_file.parsed.DB_PASSWORD == undefined) {
+        let file_used = '.env';
+
+        if(synclocal_used)
+            file_used = synclocalfile;
+
+        return cli.error(`Oh no! "${file_used}" -file doesn't have required fields (DB_USER, DB_PASSWORD, DB_HOST)!`);
+    }
+
+    return env_config_file;
 }
 
 function getDatabaseUrlFromConfig (config, app, sync_config) {
@@ -167,6 +264,22 @@ var cmd = {
     }
 }
 
+function confirmPrompt (msg) {
+    return co(function * () {
+        msg = msg + " (yes)";
+
+        let confirmation = yield cli.prompt(msg);
+
+        confirmation = confirmation.toLowerCase();
+
+        if(confirmation == "yes") {
+            return yield Promise.resolve(true);
+        } else {
+            return yield Promise.resolve(false);
+        }
+    });
+}
+
 module.exports = {
     getDatabaseUrlFromConfig : getDatabaseUrlFromConfig,
     getEnvironmentConfig : getEnvironmentConfig,
@@ -174,5 +287,8 @@ module.exports = {
     getSyncFile : getSyncFile,
     colorEnv : colorEnv,
     cmd : cmd,
+    confirmPrompt : confirmPrompt,
+    getEnvDatabaseConfig : getEnvDatabaseConfig,
+    getEnvironmentObject : getEnvironmentObject,
     validateDatabaseObject : validateDatabaseObject
 }

@@ -5,7 +5,6 @@ const co              = require('co');
 const dburl           = require('parse-db-url');
 const shell           = require('shelljs');
 const tmp             = require('tmp');
-const dotenv          = require('dotenv');
 const randomstring    = require('randomstring');
 const path            = require('path');
 
@@ -22,102 +21,6 @@ var silent = true;
 var tmp_mysql_db = {};
 
 var cmd = library.cmd;
-
-function getEnvironmentObject (env, sync_to) {
-    return co(function * () {
-        var output_object = {
-            name : env
-        };
-
-        var env_name = `${cli.color.yellow(env)}`;
-
-        var config = library.getEnvironmentConfig(env, sync_config);
-
-        if(!config) {
-            return config;
-        }
-
-        if(config.app != undefined) {
-            env_name = colorEnv(env, config.app);
-            output_object.app = config.app;
-        }
-
-        if(sync_to) {
-            if(config.mutable == undefined || !config.mutable) {
-                return cli.error(`Can not sync to the environment ${env_name}. It is not mutable.`);
-            }
-        }
-
-        let heroku_config, heroku_config_vars;
-
-        if(config.app != undefined && config.app != '') {
-            heroku_config_vars = yield heroku.get(`/apps/${config.app}/config-vars`);
-            heroku_config = yield heroku.get(`/apps/${config.app}`);
-            output_object.db = dburl(library.getDatabaseUrlFromConfig(heroku_config_vars, config.app, sync_config));
-        } else if(library.configHasOption(config, "use_local_db")){
-            let env_config = getEnvDatabaseConfig();
-
-            let pass = '';
-            if(env_config.parsed.DB_PASS) {
-                pass = env_config.parsed.DB_PASS;
-            }
-
-            output_object.db = {
-                adapter : "mysql",
-                host : env_config.parsed.DB_HOST,
-                database : env_config.parsed.DB_NAME,
-                user : env_config.parsed.DB_USER,
-                pass : pass
-            };
-        } else {
-            return cli.error(`Environment ${cli.color.yellow(env)} doesn't have a app defined, or it isn't a local.`);
-        }
-
-        if(output_object.db == undefined) {
-            return cli.error(`Could not get the database info for ${env_name}`);
-        }
-
-        if(config.app) {
-            if(heroku_config_vars.REDIS_URL != undefined) {
-                output_object.redis = dburl(heroku_config_vars.REDIS_URL);
-            }
-        }
-
-        if(config.replaces != undefined && config.replaces.length) {
-            output_object.replaces = config.replaces;
-        }
-
-        return yield Promise.resolve(output_object);
-    });
-}
-
-function getEnvDatabaseConfig () {
-    let env_config_file = {parsed : {}};
-    let synclocal_used = false;
-
-    if(fs.existsSync(synclocalfile)) {
-        env_config_file = dotenv.config({
-            'path' : './' + synclocalfile
-        });
-
-        synclocal_used = true;
-    } else if(!fs.existsSync('.env')) {
-        return cli.error("Project has no .synclocal or .env file.");
-    } else {
-        env_config_file = dotenv.config();
-    }
-
-    if(env_config_file.parsed.DB_USER == undefined || env_config_file.parsed.DB_HOST == undefined || env_config_file.parsed.DB_PASSWORD == undefined) {
-        let file_used = '.env';
-
-        if(synclocal_used)
-            file_used = synclocalfile;
-
-        return cli.error(`Oh no! "${file_used}" -file doesn't have required fields (DB_USER, DB_PASSWORD, DB_HOST)!`);
-    }
-
-    return env_config_file;
-}
 
 function * run (context, h) {
     heroku = h;
@@ -143,7 +46,7 @@ function * run (context, h) {
         use_to_from = true;
     }
 
-    let env_config_file = getEnvDatabaseConfig();
+    let env_config_file = library.getEnvDatabaseConfig(synclocalfile);
 
     if(!env_config_file) {
         return cli.error(`Could not get the required fields from the local file.`);
@@ -201,7 +104,7 @@ function * run (context, h) {
         return cli.error(`Could not find setup configuration with setup ${setup}.`);
     }
 
-    var from = yield getEnvironmentObject(setup_config.from, false);
+    var from = yield library.getEnvironmentObject(setup_config.from, false, heroku);
     var tos = [];
 
     if(!from) {
@@ -210,14 +113,14 @@ function * run (context, h) {
 
     if(typeof setup_config.to == 'object') {
         for(let t in setup_config.to) {
-            let envconf = yield getEnvironmentObject(setup_config.to[t], true);
+            let envconf = yield library.getEnvironmentObject(setup_config.to[t], true, heroku);
 
 
             if(envconf)
                 tos.push(envconf);
         }
     } else  if(typeof setup_config.to == 'string') {
-        let envconf = yield getEnvironmentObject(setup_config.to, true);
+        let envconf = yield library.getEnvironmentObject(setup_config.to, true, heroku);
 
         if(envconf)
             tos.push(envconf);

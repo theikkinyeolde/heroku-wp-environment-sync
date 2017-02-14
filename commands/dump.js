@@ -50,23 +50,21 @@ function * run (context, heroku) {
         if(!env)
             return cli.error(`No environment parameter given.`);
 
-        environment_config = library.getEnvironmentConfig(env, sync_config);
+        environment_config = yield library.getEnvironmentObject(env, false, heroku);
 
         if(!environment_config)
             return environment_config;
 
-        if(!environment_config.app)
-            return cli.error(`No app defined in ${cli.color.yellow(env)}.`);
-
         app = environment_config.app;
 
-        let heroku_config_vars = yield heroku.get(`/apps/${app}/config-vars`);
-        let heroku_config = yield heroku.get(`/apps/${app}`);
-        database = dburl(library.getDatabaseUrlFromConfig(heroku_config_vars, app, sync_config));
+        filename_prefix = `${env}_`;
 
-        filename_prefix = `${env}_${app}_`;
+        if(app)
+            filename_prefix += `${app}_`;
 
         source = colorEnv(env, app);
+
+        database = environment_config.db;
     }
 
     if(!library.validateDatabaseObject(database))
@@ -112,7 +110,14 @@ function * run (context, heroku) {
     cmd.log();
     cmd.header(`Getting the ${source} database.`);
 
-    shell.exec(`mysqldump -u${database.user} -p${database.password} -h${database.host} ${database.database} > ${location}`, {silent : silent});
+    let dump_cmd = `mysqldump -u${database.user} -h${database.host}`
+
+    if(database.password)
+        dump_cmd += ` -p${database.password}`;
+
+    dump_cmd += ` ${database.database} > ${location}`;
+
+    shell.exec(dump_cmd, {silent : silent});
 
     cmd.log();
     cmd.header(`It is done now. Bye bye!`);
