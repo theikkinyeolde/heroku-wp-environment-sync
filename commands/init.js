@@ -13,17 +13,29 @@ function * run (context, heroku) {
         return cli.error(`Syncfile already exists.`);
     }
 
-    var name = yield cli.prompt("Name of the sync configuration");
+    cli.log();
+    cli.styledHeader("Initializing sync file.");
+    cli.log("Let's put some initial data to the syncfile. You can edit it later on.");
 
-    var prod_app = yield cli.prompt("App of the production environment");
+    var name = yield cli.prompt("Name of the project");
 
-    var produrl = yield cli.prompt("Production url (www.domain.com)");
-    var localurl = yield cli.prompt("Localhost url (localhost:5000)");
+    var prod_app = yield cli.prompt("App of the production environment in heroku");
+
+    var produrl = yield cli.prompt("Production url (e.g. www.domain.com)");
+    var localurl = yield cli.prompt("Localhost url (e.g. localhost)");
+
+    var is_secure = yield library.confirmPrompt("Is local secure?");
 
     var replaces = [];
 
-    replaces.push(["https://" + produrl, "http://" + localurl]);
-    replaces.push(["http://" + produrl, "http://" + localurl]);
+    var local_prefix = "http://";
+
+    if(is_secure) {
+        local_prefix = "https://";
+    }
+
+    replaces.push(["https://" + produrl, local_prefix + localurl]);
+    replaces.push(["http://" + produrl, local_prefix + localurl]);
     replaces.push([produrl, localurl]);
 
     var syncfile_template = {
