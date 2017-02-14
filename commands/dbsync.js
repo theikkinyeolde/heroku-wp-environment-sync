@@ -104,6 +104,19 @@ function * run (context, h) {
         return cli.error(`Could not find setup configuration with setup ${setup}.`);
     }
 
+
+    if(context.flags["no-mutable-checks"]) {
+        cmd.log();
+        cmd.header("Ignoring mutable checks!");
+        cmd.log("You are ignoring mutable checks! This is not advised.");
+        cmd.log("I hope you know what you are doing.");
+
+        if(!(yield cmd.confirmPrompt("Continue?"))) {
+            cmd.log("Quitting!");
+            return;
+        }
+    }
+
     var from = yield library.getEnvironmentObject(setup_config.from, false, heroku);
     var tos = [];
 
@@ -113,14 +126,13 @@ function * run (context, h) {
 
     if(typeof setup_config.to == 'object') {
         for(let t in setup_config.to) {
-            let envconf = yield library.getEnvironmentObject(setup_config.to[t], true, heroku);
-
+            let envconf = yield library.getEnvironmentObject(setup_config.to[t], !context.flags["no-mutable-checks"], heroku);
 
             if(envconf)
                 tos.push(envconf);
         }
     } else  if(typeof setup_config.to == 'string') {
-        let envconf = yield library.getEnvironmentObject(setup_config.to, true, heroku);
+        let envconf = yield library.getEnvironmentObject(setup_config.to, !context.flags["no-mutable-checks"], heroku);
 
         if(envconf)
             tos.push(envconf);
@@ -172,7 +184,7 @@ function * run (context, h) {
         mysql_command_auth += `-p${tmp_mysql_db.pass}`;
     }
 
-    cmd.log(`Creating a temporary database.`);
+    cmd.log(`Creating a temporary database (${tmp_mysql_db.db}).`);
 
     shell.exec(`mysqladmin ${mysql_command_auth} create ${tmp_mysql_db.db}`);
 
@@ -268,7 +280,13 @@ module.exports = {
         },
         {
             name : "hide",
-            description : "Hide all log texts."
+            description : "Hide all log texts.",
+            hasValue : false
+        },
+        {
+            name : "no-mutable-checks",
+            description : "Ignore mutable checks. Be careful with this option.",
+            hasValue : false
         }
     ],
     run : cli.command(co.wrap(run))

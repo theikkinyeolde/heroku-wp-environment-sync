@@ -32,16 +32,16 @@ Then you need to edit your syncfile.json to correspond the different environment
 ]
 ```
 
-In the syncfile, you need to set the environments that you can sync to as mutable.
+In the syncfile, you need to set the environments that you can sync to as mutable (unless you have specified the --no-mutable-checks -option).
 Like so:
 ```
 {
     "name": "production",
-    "app": "production-app"
+    "app": "production_heroku_app_name"
 },
 {
     "name": "staging",
-    "app": "staging-app",
+    "app": "staging_heroku_app_name",
     "mutable": true
 }
 ```
