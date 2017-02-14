@@ -4,6 +4,7 @@ A heroku plugin to sync different wordpress environments. Especially to sync dat
 
 ## Requirements
 
+- Heroku cli (https://devcenter.heroku.com/articles/heroku-cli)
 - PHP
 
 ## Installation
