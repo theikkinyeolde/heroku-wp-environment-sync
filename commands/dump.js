@@ -95,7 +95,7 @@ function * run (context, heroku) {
     cmd.noLog("Dumping database.");
 
     cmd.log();
-    cmd.header("Hello! Let's dump so databases, shall we?");
+    cmd.header("Hello! Let's dump some databases, shall we?");
     cmd.log(`I will take the mysql dump from ${source}.`);
     cmd.log(`Then I will save it to this location:`);
     cmd.log(`${cli.color.magenta(location)}`);
@@ -163,7 +163,8 @@ module.exports = {
         },
         {
             name : "hide",
-            description : "Hide all log texts."
+            description : "Hide all log texts.",
+            hasValue : false
         }
     ],
     run : cli.command(co.wrap(run))

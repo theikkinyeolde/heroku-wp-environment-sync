@@ -24,7 +24,7 @@ function * run (context, heroku) {
     var produrl = yield cli.prompt("Production url (e.g. www.domain.com)");
     var localurl = yield cli.prompt("Localhost url (e.g. localhost)");
 
-    var is_secure = yield library.confirmPrompt("Is local secure?");
+    var is_secure = yield library.confirmPrompt("Is local https?");
 
     var replaces = [];
 

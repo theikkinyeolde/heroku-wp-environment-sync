@@ -162,7 +162,7 @@ function * run (context, h) {
         cmd.log(`- ${colorEnv(tos[t].name, tos[t].app)}`);
     }
 
-    if(yield cmd.confirmPrompt('Are you ok with this?')) {
+    if(yield cmd.confirmPrompt(`Are you ok with this?`)) {
         cmd.log(`Ok! Let's do this!`);
     } else {
         cmd.log(`No sweat! Some other time then!`);
