@@ -5,7 +5,8 @@ const cli         = require('heroku-cli-util');
 const path        = require('path');
 const library     = require('../library/library.js');
 
-var syncfile = 'syncfile.json';
+const syncfile        = library.defaultsyncfile;
+const synclocalfile   = library.defaultsynclocalfile;
 
 function * run (context, heroku) {
 

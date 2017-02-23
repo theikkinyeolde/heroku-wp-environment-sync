@@ -14,7 +14,8 @@ var silent = true;
 
 var cmd = library.cmd;
 
-const syncfile  = 'syncfile.json';
+const syncfile        = library.defaultsyncfile;
+const synclocalfile   = library.defaultsynclocalfile;
 
 function * run (context, heroku) {
 

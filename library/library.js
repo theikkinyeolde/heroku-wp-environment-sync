@@ -5,6 +5,9 @@ const jsonfile  = require('jsonfile');
 const co        = require('co');
 const dotenv    = require('dotenv');
 
+const syncfile        = 'syncfile.json';
+const synclocalfile   = '.synclocal';
+
 function colorEnv (env, app) {
     if(!app)
         return `${cli.color.yellow(env)}`;
@@ -80,13 +83,13 @@ function getEnvironmentObject (env, sync_to, heroku) {
     });
 }
 
-function getEnvDatabaseConfig (envfile) {
+function getEnvDatabaseConfig () {
     let env_config_file = {parsed : {}};
     let synclocal_used = false;
 
-    if(fs.existsSync(envfile)) {
+    if(fs.existsSync(synclocalfile)) {
         env_config_file = dotenv.config({
-            'path' : './' + envfile
+            'path' : './' + synclocalfile
         });
 
         synclocal_used = true;
@@ -290,5 +293,7 @@ module.exports = {
     confirmPrompt : confirmPrompt,
     getEnvDatabaseConfig : getEnvDatabaseConfig,
     getEnvironmentObject : getEnvironmentObject,
-    validateDatabaseObject : validateDatabaseObject
+    validateDatabaseObject : validateDatabaseObject,
+    defaultsyncfile : syncfile,
+    defaultsynclocalfile : synclocalfile
 }

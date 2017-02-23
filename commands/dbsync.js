@@ -12,8 +12,8 @@ const library         = require('../library/library.js');
 
 const colorEnv        = library.colorEnv;
 
-const syncfile        = 'syncfile.json';
-const synclocalfile   = '.synclocal';
+const syncfile        = library.defaultsyncfile;
+const synclocalfile   = library.defaultsynclocalfile;
 
 var sync_config = {};
 var heroku = {};
@@ -46,10 +46,29 @@ function * run (context, h) {
         use_to_from = true;
     }
 
-    let env_config_file = library.getEnvDatabaseConfig(synclocalfile);
+    let env_config_file = library.getEnvDatabaseConfig();
 
     if(!env_config_file) {
-        return cli.error(`Could not get the required fields from the local file.`);
+        cli.log(`Okay, here's the deal.`);
+        cli.log(`Your .env file doesn't have the required database information and you don't seem to have a .synclocal -file.`);
+
+        if(!(yield library.confirmPrompt(`You wan't to create one?`))) {
+            return cli.error(`Could not get the required fields from the local file.`);
+        }
+
+        let db_host = yield cli.prompt("DB_HOST (Database host)");
+        let db_user = yield cli.prompt("DB_USER (Database username)");
+        let db_pass = "";
+
+        if(yield library.confirmPrompt(`Local database has password?`)) {
+            db_pass = yield cli.prompt("DB_PASSWORD (Database password)");
+        }
+
+        let db_name = yield cli.prompt("DB_NAME (Database name)");
+
+        fs.writeFileSync(`./${synclocalfile}`, `DB_HOST=${db_host}\nDB_USER=${db_user}\nDB_PASSWORD=${db_pass}\nDB_NAME=${db_name}`);
+
+        env_config_file = library.getEnvDatabaseConfig();
     }
 
     if(sync_config.environments == undefined || !sync_config.environments.length) {
