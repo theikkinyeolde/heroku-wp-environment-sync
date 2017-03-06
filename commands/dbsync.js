@@ -218,21 +218,23 @@ function * run (context, h) {
         let to_config = tos[t];
         let to_tmpfile = tmp.fileSync();
 
-        for(let r in to_config.replaces) {
-            let replace_from = to_config.replaces[r][0];
-            let replace_to = to_config.replaces[r][1];
+        if(!context.flags['no-replace']) {
+            for(let r in to_config.replaces) {
+                let replace_from = to_config.replaces[r][0];
+                let replace_to = to_config.replaces[r][1];
 
-            let replace_exec_command = `php ${path.resolve(__dirname, "../")}/sar.php --user ${tmp_mysql_db.user} `;
+                let replace_exec_command = `php ${path.resolve(__dirname, "../")}/sar.php --user ${tmp_mysql_db.user} `;
 
-            if(tmp_mysql_db.pass) {
-                replace_exec_command += `--pass ${tmp_mysql_db.pass} `;
+                if(tmp_mysql_db.pass) {
+                    replace_exec_command += `--pass ${tmp_mysql_db.pass} `;
+                }
+
+                replace_exec_command += `--host ${tmp_mysql_db.host} --db ${tmp_mysql_db.db} --replace ${replace_from} --replace-with ${replace_to}`;
+
+                cmd.log(`Replacing "${cli.color.green(replace_from)}" to "${cli.color.green(replace_to)}"`);
+
+                shell.exec(replace_exec_command, {silent : silent});
             }
-
-            replace_exec_command += `--host ${tmp_mysql_db.host} --db ${tmp_mysql_db.db} --replace ${replace_from} --replace-with ${replace_to}`;
-
-            cmd.log(`Replacing "${cli.color.green(replace_from)}" to "${cli.color.green(replace_to)}"`);
-
-            shell.exec(replace_exec_command, {silent : silent});
         }
 
         cmd.log(`Pushing the mysql database to ${colorEnv(to_config.name, to_config.app)}.`);
@@ -305,6 +307,11 @@ module.exports = {
         {
             name : "no-mutable-checks",
             description : "Ignore mutable checks. Be careful with this option.",
+            hasValue : false
+        },
+        {
+            name : "no-replace",
+            description : "Skip the search and replace part of the sync.",
             hasValue : false
         }
     ],
