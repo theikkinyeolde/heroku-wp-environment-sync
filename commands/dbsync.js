@@ -126,7 +126,6 @@ function * run (context, h) {
         return cli.error(`Could not find setup configuration with setup ${setup}.`);
     }
 
-
     if(context.flags["no-mutable-checks"]) {
         cmd.log();
         cmd.header("Ignoring mutable checks!");
@@ -299,7 +298,7 @@ module.exports = {
         {
             name : "force",
             char : "f",
-            description : "No messages, no prompts, just pure execution.",
+            description : "No prompts, just pure execution.",
             hasValue : false
         },
         {

@@ -25,7 +25,8 @@ heroku sync:init
 The initialization command will ask you questions and creates a syncfile according to those answers.
 The syncfile can (and probably have to) be modified by hand afterwards.
 
-Then you need to edit your syncfile.json to correspond the different environments. The search and replaces are defined as followed:
+Then you need to edit your syncfile.json to correspond the different environments.
+The search and replaces can be added as many as needed and are defined as followed:
 ```
 "replaces" : [
     ["http://www.domain.com", "http://localhost"],

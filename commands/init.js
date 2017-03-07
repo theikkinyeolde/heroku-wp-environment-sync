@@ -57,7 +57,7 @@ function * run (context, heroku) {
         }
     }
 
-    cli.log(`Using database env ${current_database_env}.`);
+    cli.log(`Using database env variable ${current_database_env}.`);
 
     if(has_multiple_databases) {
         cli.log(`Well it seems that you have multiple databases in your heroku app.`);
