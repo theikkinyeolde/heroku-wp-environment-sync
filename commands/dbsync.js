@@ -50,7 +50,10 @@ function * run (context, h) {
 
     if(!env_config_file) {
         cli.log(`Okay, here's the deal.`);
-        cli.log(`Your .env file doesn't have the required database information and you don't seem to have a .synclocal -file.`);
+        cli.log(`Your .env file doesn't have the required database information of your local database and you don't seem to have a .synclocal -file.`);
+
+        cli.log();
+        cli.log(`So what you need is a local database configuration file.`);
 
         if(!(yield library.confirmPrompt(`You wan't to create one?`))) {
             return cli.error(`Could not get the required fields from the local file.`);

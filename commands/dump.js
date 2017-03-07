@@ -34,7 +34,14 @@ function * run (context, heroku) {
 
         let heroku_config_vars = yield heroku.get(`/apps/${app}/config-vars`);
         let heroku_config = yield heroku.get(`/apps/${app}`);
-        database = dburl(library.getDatabaseUrlFromConfig(heroku_config_vars, app, {}));
+
+        let db_env = yield cli.prompt(`What is the env variable of the database url in the app ${cli.color.app(app)}?`);
+
+        if(!heroku_config_vars[db_env]) {
+            return cli.error(`No database env variable found with ${cli.color.red(db_env)}.`);
+        }
+
+        database = dburl(heroku_config_vars[db_env]);
 
         filename_prefix = `${app}_`;
 

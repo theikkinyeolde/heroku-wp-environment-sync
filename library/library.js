@@ -4,9 +4,11 @@ const fs        = require('fs');
 const jsonfile  = require('jsonfile');
 const co        = require('co');
 const dotenv    = require('dotenv');
+const semver    = require('semver');
 
-const syncfile        = 'syncfile.json';
-const synclocalfile   = '.synclocal';
+const syncfile                  = 'syncfile.json';
+const synclocalfile             = '.synclocal';
+const needed_sync_file_version  = '0.1.7'
 
 function colorEnv (env, app) {
     if(!app)
@@ -45,7 +47,7 @@ function getEnvironmentObject (env, sync_to, heroku) {
         if(config.app != undefined && config.app != '') {
             heroku_config_vars = yield heroku.get(`/apps/${config.app}/config-vars`);
             heroku_config = yield heroku.get(`/apps/${config.app}`);
-            output_object.db = dburl(getDatabaseUrlFromConfig(heroku_config_vars, config.app, sync_config));
+            output_object.db = dburl(getDatabaseUrlFromConfig(env, heroku_config_vars, sync_config));
         } else if(configHasOption(config, "use_local_db")){
             let env_config = getEnvDatabaseConfig();
 
@@ -111,28 +113,19 @@ function getEnvDatabaseConfig () {
     return env_config_file;
 }
 
-function getDatabaseUrlFromConfig (config, app, sync_config) {
-    var url = '';
+function getDatabaseUrlFromConfig (env, heroku_config, sync_config) {
 
-    if(sync_config.db) {
-        if(sync_config.db == 'jaws') {
-            url = config.JAWSDB_URL;
-        } else if(sync_config.db == 'cleardb') {
-            url = config.CLEARDB_DATABASE_URL;
-        } else {
-            return cli.error("Unknown database specified in the sync file.");
-        }
-    } else if(config.JAWSDB_URL != undefined) {
-        url = config.JAWSDB_URL;
-    } else if(config.CLEARDB_DATABASE_URL != undefined) {
-        url = config.CLEARDB_DATABASE_URL;
+    var env_config = getEnvironmentConfig(env, sync_config);
+
+    if(!env_config.db_env) {
+        return cli.error(`No db_env set for the environment ${cli.color.yellow(env)}.`);
     }
 
-    if(url.length == 0) {
-        return cli.error(`No database url specified in the ${cli.color.app(app)} -application.`);
+    if(!heroku_config[env_config.db_env]) {
+        return cli.error(`No heroku env set with the env ${cli.color.red(env_config.db_env)}`);
     }
 
-    return url;
+    return heroku_config[env_config.db_env];
 }
 
 function getEnvironmentConfig (env, config) {
@@ -164,6 +157,10 @@ function getSyncFile (syncfile) {
     }
 
     sync_config = jsonfile.readFileSync(syncfile);
+
+    if(!sync_config.version || semver.gt(needed_sync_file_version, sync_config.version)) {
+        return cli.error(`Your current syncfile seems to be too old. Needed syncfile version ${needed_sync_file_version} and you have ${sync_config.version}. You better initialize the syncfile again.`);
+    }
 
     return sync_config;
 }
