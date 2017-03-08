@@ -23,7 +23,20 @@ function * run (context, heroku) {
 
     var name = yield cli.prompt("Name of the project");
 
-    var prod_app = yield cli.prompt("App name of the production environment in heroku");
+    var prod_app_valid = false;
+
+    while(!prod_app_valid) {
+        var prod_app = yield cli.prompt("App name of the production environment in heroku");
+
+        cli.log(`Validating the production app.`);
+
+        try {
+            var app_data = yield yield heroku.get(`/apps/${prod_app}/`);
+            prod_app_valid = true;
+        } catch(error) {
+            console.log("No app with that name.");
+        }
+    }
 
     var produrl = yield cli.prompt("Production url (in the form: www.domain.com)");
     var localurl = yield cli.prompt("Localhost url (in the form: localhost)");
