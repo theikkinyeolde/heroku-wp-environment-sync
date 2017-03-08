@@ -49,11 +49,14 @@ function getEnvironmentObject (env, sync_to, heroku) {
             heroku_config = yield heroku.get(`/apps/${config.app}`);
             output_object.db = dburl(getDatabaseUrlFromConfig(env, heroku_config_vars, sync_config));
         } else if(configHasOption(config, "use_local_db")){
-            let env_config = getEnvDatabaseConfig();
+            let env_config = yield getEnvDatabaseConfig();
+
+            if(!env_config)
+                return cli.error(`Could not get local database configuration.`);
 
             let pass = '';
-            if(env_config.parsed.DB_PASS) {
-                pass = env_config.parsed.DB_PASS;
+            if(env_config.parsed.DB_PASSWORD) {
+                pass = env_config.parsed.DB_PASSWORD;
             }
 
             output_object.db = {
@@ -86,31 +89,62 @@ function getEnvironmentObject (env, sync_to, heroku) {
 }
 
 function getEnvDatabaseConfig () {
-    let env_config_file = {parsed : {}};
-    let synclocal_used = false;
+    return co(function * () {
+        let env_config_file = {parsed : {}};
+        let synclocal_used = false;
 
-    if(fs.existsSync(synclocalfile)) {
-        env_config_file = dotenv.config({
-            'path' : './' + synclocalfile
-        });
+        if(fs.existsSync(synclocalfile)) {
+            env_config_file = dotenv.config({
+                'path' : './' + synclocalfile
+            });
 
-        synclocal_used = true;
-    } else if(!fs.existsSync('.env')) {
-        return cli.error("Project has no .synclocal or .env file.");
-    } else {
-        env_config_file = dotenv.config();
-    }
+            synclocal_used = true;
+        } else if(!fs.existsSync('.env')) {
+            cli.log(`Okay, here's the deal.`);
+            cli.log(`Your .env file doesn't exist and you don't seem to have a .synclocal -file.`);
 
-    if(env_config_file.parsed.DB_USER == undefined || env_config_file.parsed.DB_HOST == undefined || env_config_file.parsed.DB_PASSWORD == undefined) {
-        let file_used = '.env';
+            cli.log();
+            cli.log(`So what you need is a local database configuration file.`);
 
-        if(synclocal_used)
-            file_used = synclocalfile;
+            if(!(yield confirmPrompt(`You wan't to create one?`))) {
+                return cli.error(`No local file to use, aborting.`);
+            }
 
-        return cli.error(`Oh no! "${file_used}" -file doesn't have required fields (DB_USER, DB_PASSWORD, DB_HOST)!`);
-    }
+            let db_host = yield cli.prompt("DB_HOST (Database host)");
+            let db_user = yield cli.prompt("DB_USER (Database username)");
+            let db_pass = "";
 
-    return env_config_file;
+            if(yield confirmPrompt(`Local database has password?`)) {
+                db_pass = yield cli.prompt("DB_PASSWORD (Database password)");
+            }
+
+            let db_name = yield cli.prompt("DB_NAME (Database name)");
+
+            fs.writeFileSync(`./${synclocalfile}`, `DB_HOST=${db_host}\nDB_USER=${db_user}\nDB_PASSWORD=${db_pass}\nDB_NAME=${db_name}`);
+
+            env_config_file = dotenv.config({
+                'path' : './' + synclocalfile
+            });
+
+            console.log(env_config_file);
+
+            synclocal_used = true;
+        } else {
+            env_config_file = dotenv.config();
+        }
+
+
+        if(env_config_file.parsed.DB_USER == undefined || env_config_file.parsed.DB_HOST == undefined || env_config_file.parsed.DB_PASSWORD == undefined) {
+            let file_used = '.env';
+
+            if(synclocal_used)
+                file_used = synclocalfile;
+
+            return cli.error(`Oh no! "${file_used}" -file doesn't have required fields (DB_USER, DB_PASSWORD, DB_HOST)!`);
+        }
+
+        return yield Promise.resolve(env_config_file);
+    });
 }
 
 function getDatabaseUrlFromConfig (env, heroku_config, sync_config) {
