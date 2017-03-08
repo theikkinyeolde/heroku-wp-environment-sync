@@ -5,8 +5,9 @@ const cli         = require('heroku-cli-util');
 const path        = require('path');
 const library     = require('../library/library.js');
 
-const syncfile        = library.defaultsyncfile;
-const synclocalfile   = library.defaultsynclocalfile;
+const syncfile              = library.defaultsyncfile;
+const synclocalfile         = library.defaultsynclocalfile;
+const valid_database_envs   = library.validDatabaseEnvs;
 
 function * run (context, heroku) {
 
@@ -39,8 +40,6 @@ function * run (context, heroku) {
     var current_database_env = '';
     var database_envs = [];
 
-    var valid_database_envs = ['JAWSDB_URL', 'CLEARDB_DATABASE_URL'];
-
     for(let e in valid_database_envs) {
         let db_env = valid_database_envs[e];
 
@@ -57,17 +56,31 @@ function * run (context, heroku) {
         }
     }
 
-    cli.log(`Using database env variable ${current_database_env}.`);
-
     if(has_multiple_databases) {
-        cli.log(`Well it seems that you have multiple databases in your heroku app.`);
+        let valid_db_variable = false;
+
+        cli.log(`Well, it seems that you have multiple databases in your heroku app.`);
         cli.log(`Current database env variables found:`);
         for(let e in database_envs) {
-            cli.log(` - ${database_envs[e]}`);
+            cli.log(`- ${cli.color.green(database_envs[e])}`);
         }
         cli.log(`Type in which database environment variable to use?`);
-        current_database_env = yield cli.prompt(`Database env name:`);
+
+        while(!valid_db_variable) {
+            let db_env_var = yield cli.prompt(`Database env name`);
+
+            if(valid_database_envs.indexOf(db_env_var.toUpperCase()) == -1) {
+                cli.log(`That is not a valid db env variable.`);
+                continue;
+            }
+
+            valid_db_variable = true;
+
+            current_database_env = db_env_var.toUpperCase();
+        }
     }
+
+    cli.log(`Using database env variable ${current_database_env}.`);
 
     replaces.push(["https://" + produrl, 'http://' + localurl]);
     replaces.push(["http://" + produrl, 'http://' + localurl]);

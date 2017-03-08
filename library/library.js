@@ -8,7 +8,8 @@ const semver    = require('semver');
 
 const syncfile                  = 'syncfile.json';
 const synclocalfile             = '.synclocal';
-const needed_sync_file_version  = '0.1.7'
+const neededSyncFileVersion     = '0.1.7'
+const validDatabaseEnvs         = ['JAWSDB_URL', 'CLEARDB_DATABASE_URL'];
 
 function colorEnv (env, app) {
     if(!app)
@@ -192,8 +193,8 @@ function getSyncFile (syncfile) {
 
     sync_config = jsonfile.readFileSync(syncfile);
 
-    if(!sync_config.version || semver.gt(needed_sync_file_version, sync_config.version)) {
-        return cli.error(`Your current syncfile seems to be too old. Needed syncfile version ${needed_sync_file_version} and you have ${sync_config.version}. You better initialize the syncfile again.`);
+    if(!sync_config.version || semver.gt(neededSyncFileVersion, sync_config.version)) {
+        return cli.error(`Your current syncfile seems to be too old. Needed syncfile version ${neededSyncFileVersion} and you have ${sync_config.version}. You better initialize the syncfile again.`);
     }
 
     return sync_config;
@@ -326,5 +327,6 @@ module.exports = {
     getEnvironmentObject : getEnvironmentObject,
     validateDatabaseObject : validateDatabaseObject,
     defaultsyncfile : syncfile,
-    defaultsynclocalfile : synclocalfile
+    defaultsynclocalfile : synclocalfile,
+    validDatabaseEnvs : validDatabaseEnvs
 }
