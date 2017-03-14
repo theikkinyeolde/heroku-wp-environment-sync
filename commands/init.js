@@ -3,6 +3,7 @@ const jsonfile    = require('jsonfile');
 const co          = require('co');
 const cli         = require('heroku-cli-util');
 const path        = require('path');
+const parseUrl    = require('parse-url');
 const library     = require('../library/library.js');
 
 const syncfile              = library.defaultsyncfile;
@@ -10,7 +11,6 @@ const synclocalfile         = library.defaultsynclocalfile;
 const valid_database_envs   = library.validDatabaseEnvs;
 
 function * run (context, heroku) {
-
     if(fs.existsSync(syncfile)) {
         return cli.error(`Syncfile already exists.`);
     }
@@ -38,8 +38,23 @@ function * run (context, heroku) {
         }
     }
 
-    var produrl = yield cli.prompt("Production url (in the form: www.domain.com)");
-    var localurl = yield cli.prompt("Localhost url (in the form: localhost)");
+    var produrl = yield cli.prompt("Production url");
+    var localurl = yield cli.prompt("Localhost url");
+
+    var prod_url_data = parseUrl(produrl);
+    var local_url_data = parseUrl(localurl);
+
+    produrl = prod_url_data.resource;
+
+    if(prod_url_data.port) {
+        produrl += ':' + prod_url_data.port;
+    }
+
+    localurl = local_url_data.resource;
+
+    if(local_url_data.port) {
+        localurl += ':' + local_url_data.port;
+    }
 
     var replaces = [];
 
