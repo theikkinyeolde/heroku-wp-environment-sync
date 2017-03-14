@@ -1,7 +1,7 @@
 'use strict'
 
 exports.topic = {
-    name : 'wpsync',
+    name : 'sync',
     description : 'Sync different environments. Folder needs to have sync configuration file.'
 }
 
