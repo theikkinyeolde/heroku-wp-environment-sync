@@ -17,6 +17,12 @@ heroku plugins:install heroku-wp-environment-sync
 
 ## Usage
 
+You can get more information with the help command.
+For example:
+```
+heroku help sync:dbsync
+```
+
 First you need to create syncfile.json in your project folder. You can create one from a template by running this command:
 ```
 heroku sync:init

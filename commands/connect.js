@@ -91,7 +91,7 @@ module.exports = {
     flags : [
         {
             name : "app",
-            description : "If you just want to take the database dump from an app directly.",
+            description : "If you want to connect to an apps database directly.",
             hasValue : true
         }
     ],

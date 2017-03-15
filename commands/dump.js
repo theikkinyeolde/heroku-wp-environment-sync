@@ -123,7 +123,7 @@ function * run (context, heroku) {
     if(database.password)
         dump_cmd += ` -p${database.password}`;
 
-    dump_cmd += ` ${database.database} > ${location}`;
+    dump_cmd += ` ${database.database} --single-transaction --quick > ${location}`;
 
     shell.exec(dump_cmd, {silent : silent});
 

@@ -175,7 +175,7 @@ function * run (context, h) {
 
     cmd.log(`Getting the database from ${colorEnv(from.name, from.app)}`);
 
-    shell.exec(`mysqldump -u${from.db.user} -p${from.db.password} -h${from.db.host} ${from.db.database} > ${tmpfile.name}`, {silent : silent});
+    shell.exec(`mysqldump -u${from.db.user} -p${from.db.password} -h${from.db.host} ${from.db.database} --single-transaction --quick > ${tmpfile.name}`, {silent : silent});
 
     let mysql_command_auth = `-u${tmp_mysql_db.user} -h${tmp_mysql_db.host} `;
 
@@ -265,12 +265,12 @@ module.exports = {
     flags : [
         {
             name : "from",
-            description : "The sync source environment.",
+            description : "The environment from where to take the database.",
             hasValue : true
         },
         {
             name : "to",
-            description : "The destination of the sync.",
+            description : "The destination environment of the sync.",
             hasValue : true
         },
         {
