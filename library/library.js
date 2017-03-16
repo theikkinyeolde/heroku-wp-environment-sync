@@ -85,6 +85,10 @@ function getEnvironmentObject (env, sync_to, heroku) {
             output_object.replaces = config.replaces;
         }
 
+        if(config.scripts != undefined) {
+            output_object.scripts = config.scripts;
+        }
+
         return yield Promise.resolve(output_object);
     });
 }

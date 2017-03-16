@@ -23,6 +23,47 @@ var tmp_mysql_db = {};
 
 var cmd = library.cmd;
 
+function runCommands (commands) {
+    if(typeof(commands) == undefined)
+        return;
+
+    if(typeof(commands) == 'string') {
+        if(commands.length == 0)
+            return;
+
+        shell.exec(commands);
+    } else if (typeof(commands) == 'object') {
+        for(let c in commands) {
+            if(commands[c].length == 0)
+                continue;
+
+            shell.exec(commands[c]);
+        }
+    }
+}
+
+function getCommandsByName(name, env_config) {
+    if(env_config.scripts != undefined) {
+        for(let s in env_config.scripts) {
+            if(s == name) {
+                return env_config.scripts[s];
+            }
+        }
+    }
+
+    return false;
+}
+
+function runCommandsByName (name, env_config) {
+    let commands = getCommandsByName(name, env_config)
+
+    if(commands != false) {
+        return runCommands(commands);
+    }
+
+    return false;
+}
+
 function * run (context, h) {
     heroku = h;
     var silent = true;
@@ -182,7 +223,11 @@ function * run (context, h) {
 
     cmd.log(`Getting the database from ${colorEnv(from.name, from.app)}`);
 
+    runCommandsByName("before_fetch", from);
+
     shell.exec(`mysqldump -u${from.db.user} -p${from.db.password} -h${from.db.host} ${from.db.database} ${additional_mysqldump_parameters} > ${tmpfile.name}`, {silent : silent});
+
+    runCommandsByName("after_fetch", from);
 
     if(context.flags['store-dumps']) {
         shell.exec(`cp ${tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${from.name}.sql`);
@@ -203,6 +248,8 @@ function * run (context, h) {
     for(let t in tos) {
         cmd.log();
         cmd.header(`Syncing ${cli.color.yellow(from.name)}' to '${cli.color.yellow(tos[t].name)}'`);
+
+        runCommandsByName("before_sync", tos[t]);
 
         shell.exec(`mysql ${mysql_command_auth} ${tmp_mysql_db.db} < ${tmpfile.name}`);
 
@@ -243,6 +290,8 @@ function * run (context, h) {
             to_mysql_auth += `-p${tos[t].db.password}`;
 
         shell.exec(`mysql ${to_mysql_auth} ${tos[t].db.database} < ${to_tmpfile.name}`, {silent : silent});
+
+        runCommandsByName("after_sync", tos[t]);
 
         if(tos[t].redis != undefined) {
             cmd.log("Redis found. Flushing it.");

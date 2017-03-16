@@ -143,7 +143,17 @@ function * run (context, heroku) {
                 "db_env" : current_database_env,
                 "replaces" : [
                     []
-                ]
+                ],
+                "scripts" : {
+                    "before_sync" : [
+                    ],
+                    "after_sync" : [
+                    ],
+                    "before_fetch" : [
+                    ],
+                    "after_fetch" : [
+                    ]
+                }
             },
             {
                 "name" : "localhost",
@@ -151,7 +161,17 @@ function * run (context, heroku) {
                 "replaces" : replaces,
                 "options" : [
                     "use_local_db"
-                ]
+                ],
+                "scripts" : {
+                    "before_sync" : [
+                    ],
+                    "after_sync" : [
+                    ],
+                    "before_fetch" : [
+                    ],
+                    "after_fetch" : [
+                    ]
+                }
             }
         ]
     };
