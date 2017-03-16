@@ -118,12 +118,18 @@ function * run (context, heroku) {
     cmd.log();
     cmd.header(`Getting the ${source} database.`);
 
+    let additional_mysqldump_parameters = "";
+
+    if(!context.flags['lock-database']) {
+        additional_mysqldump_parameters = "--single-transaction --quick";
+    }
+
     let dump_cmd = `mysqldump -u${database.user} -h${database.host}`
 
     if(database.password)
         dump_cmd += ` -p${database.password}`;
 
-    dump_cmd += ` ${database.database} --single-transaction --quick > ${location}`;
+    dump_cmd += ` ${database.database} ${additional_mysqldump_parameters} > ${location}`;
 
     shell.exec(dump_cmd, {silent : silent});
 
@@ -172,6 +178,11 @@ module.exports = {
         {
             name : "hide",
             description : "Hide all log texts.",
+            hasValue : false
+        },
+        {
+            name : "lock-database",
+            description : "Lock the database during the dumping process.",
             hasValue : false
         }
     ],

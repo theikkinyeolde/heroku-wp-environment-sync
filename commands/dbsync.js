@@ -7,6 +7,7 @@ const shell           = require('shelljs');
 const tmp             = require('tmp');
 const randomstring    = require('randomstring');
 const path            = require('path');
+const os              = require('os');
 
 const library         = require('../library/library.js');
 
@@ -173,9 +174,19 @@ function * run (context, h) {
 
     var tmpfile = tmp.fileSync();
 
+    let additional_mysqldump_parameters = "";
+
+    if(!context.flags['lock-database']) {
+        additional_mysqldump_parameters = "--single-transaction --quick";
+    }
+
     cmd.log(`Getting the database from ${colorEnv(from.name, from.app)}`);
 
-    shell.exec(`mysqldump -u${from.db.user} -p${from.db.password} -h${from.db.host} ${from.db.database} --single-transaction --quick > ${tmpfile.name}`, {silent : silent});
+    shell.exec(`mysqldump -u${from.db.user} -p${from.db.password} -h${from.db.host} ${from.db.database} ${additional_mysqldump_parameters} > ${tmpfile.name}`, {silent : silent});
+
+    if(context.flags['store-dumps']) {
+        shell.exec(`cp ${tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${from.name}.sql`);
+    }
 
     let mysql_command_auth = `-u${tmp_mysql_db.user} -h${tmp_mysql_db.host} `;
 
@@ -219,7 +230,12 @@ function * run (context, h) {
 
         cmd.log(`Pushing the mysql database to ${colorEnv(to_config.name, to_config.app)}.`);
 
-        shell.exec(`mysqldump ${mysql_command_auth} ${tmp_mysql_db.db} > ${to_tmpfile.name}`);
+        shell.exec(`mysqldump ${mysql_command_auth} ${tmp_mysql_db.db} ${additional_mysqldump_parameters} > ${to_tmpfile.name}`);
+
+        if(context.flags['store-dumps']) {
+            shell.exec(`cp ${to_tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${tos[t].name}.sql`);
+        }
+
 
         let to_mysql_auth = `-u${tos[t].db.user} -h${tos[t].db.host} `;
 
@@ -246,6 +262,15 @@ function * run (context, h) {
 
     if(context.flags.hide) {
         cli.log("Done.");
+    }
+
+    if(context.flags['store-dumps']) {
+        cmd.log();
+        cmd.header(`Dump store locations`);
+        cmd.log(`The dump for ${from.name} is located in: ${os.tmpdir()}/heroku_wp_environment_sync_${from.name}.sql`);
+        for(let t in tos) {
+            cmd.log(`The dump for ${tos[t].name} is located in: ${os.tmpdir()}/heroku_wp_environment_sync_${tos[t].name}.sql`);
+        }
     }
 }
 
@@ -292,6 +317,16 @@ module.exports = {
         {
             name : "no-replace",
             description : "Skip the search and replace part of the sync.",
+            hasValue : false
+        },
+        {
+            name : "lock-database",
+            description : "Lock the database during the dumping process.",
+            hasValue : false
+        },
+        {
+            name : "store-dumps",
+            description : "Store dumps for later use.",
             hasValue : false
         }
     ],
