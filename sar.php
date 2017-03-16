@@ -124,16 +124,25 @@ function getArgumentData ($arguments) {
 }
 
 function recursiveObjectReplace ($object, $replace, $replace_with = "") {
-    foreach($object as $key => $value) {
-        if(is_string($value)) {
-            $object[$key] = str_replace($replace, $replace_with, $value);
-        } else if(is_array($value)) {
-            $object[$key] = recursiveObjectReplace($value, $replace, $replace_with);
-        } else {
-            $object[$key] = $value;
+    $output_data = "";
+    if(is_string($object)) {
+        $output_data = str_replace($replace, $replace_with, $object);
+    } else if(is_array($object)) {
+        $output_data = array();
+        foreach($object as $key => $value) {
+            $output_data[$key] = recursiveObjectReplace($value, $replace, $replace_with);
         }
+    } else if(is_object($object)) {
+        $object = get_object_vars($object);
+        $output_data = $object;
+        foreach($object as $key => $value) {
+            $output_data->$key = recursiveObjectReplace($value, $replace, $replace_with);
+        }
+    } else {
+        $output_data = $object;
     }
-    return $object;
+
+    return $output_data;
 }
 
 $arguments = getArgumentData($argv);
@@ -179,9 +188,9 @@ $tables = $mysql->query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCH
 if($tables && !empty($replace) && !empty($replace_with)) {
     foreach($tables->fetch_all(MYSQLI_ASSOC) as $table) {
         $table_name = $table['TABLE_NAME'];
-        
+
         $primary_key = $mysql->query("SHOW INDEX FROM " . $table_name . " WHERE Key_name = 'PRIMARY'")->fetch_array()['Column_name'];
-        
+
         echo "\n" . $table_name;
 
         if($primary_key) {
@@ -199,15 +208,17 @@ if($tables && !empty($replace) && !empty($replace_with)) {
 
                 if(!$rows)
                     continue;
-                    
+
                 foreach($rows->fetch_all(MYSQLI_ASSOC) as $data) {
                     $unserialized_data = @unserialize($data[$column_name]);
-                            
+
+
                     if($unserialized_data === FALSE) {
                         $update = $mysql->query("UPDATE " . $table_name . " SET " . $column_name . " = REPLACE(" . $column_name . ", '" . $mysql->real_escape_string($replace) . "', '" . $mysql->real_escape_string($replace_with) . "') WHERE " . $primary_key . " = '" . $data[$primary_key] . "'");
-                    } else {                            
+                    } else {
+
                         $unserialized_data = recursiveObjectReplace($unserialized_data, $replace, $replace_with);
-                        
+
                         $serialized_data = serialize($unserialized_data);
 
                         $update = $mysql->query("UPDATE " . $table_name . " SET " . $column_name . " = '" . $mysql->real_escape_string($serialized_data) . "' WHERE " . $primary_key . " = '" . $data[$primary_key] . "'");
