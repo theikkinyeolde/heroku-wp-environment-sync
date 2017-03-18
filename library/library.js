@@ -338,5 +338,6 @@ module.exports = {
     getEnvDatabaseConfig : getEnvDatabaseConfig,
     getEnvironmentObject : getEnvironmentObject,
     validateDatabaseObject : validateDatabaseObject,
-    validDatabaseEnvs : valid_database_envs
+    validDatabaseEnvs : valid_database_envs,
+    defaultSyncFilename : syncfilename
 }

@@ -10,7 +10,7 @@ const library     = require('../library/library.js');
 const valid_database_envs   = library.validDatabaseEnvs;
 
 function * run (context, heroku) {
-    if(fs.existsSync(syncfile)) {
+    if(fs.existsSync(library.defaultSyncFilename + '.json') || fs.existsSync(library.defaultSyncFilename + '.js')) {
         return cli.error(`Syncfile already exists.`);
     }
 
@@ -163,7 +163,7 @@ function * run (context, heroku) {
         ]
     };
 
-    fs.writeFile(`${path.resolve('./')}/${syncfile}`, JSON.stringify(syncfile_template, null, 4));
+    fs.writeFile(`${path.resolve('./')}/${library.defaultSyncFilename + '.json'}`, JSON.stringify(syncfile_template, null, 4));
 
     cli.styledHeader("Syncfile initialized.");
 }
