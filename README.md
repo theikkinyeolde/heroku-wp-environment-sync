@@ -17,12 +17,6 @@ heroku plugins:install heroku-wp-environment-sync
 
 ## Usage
 
-You can get more information with the help command.
-For example:
-```
-heroku help sync:dbsync
-```
-
 First you need to create syncfile.json in your project folder. You can create one from a template by running this command:
 ```
 heroku sync:init
@@ -35,8 +29,26 @@ Then you need to edit your syncfile.json to correspond the different environment
 The search and replaces can be added as many as needed and are defined as followed:
 ```
 "replaces" : [
-    ["http://www.domain.com", "http://localhost"],
-    ["www.domain.com", "localhost"]
+    {
+        "from" : [
+            "http://www.domain.com",
+            "https://www.domain.com"
+        ],
+        "to" : "http://localhost"
+    }
+]
+```
+
+You can also use regular expression in the search and replace with the regex -option, like so:
+```
+"replaces" : [
+    {
+        "from" : [
+            "https?:\\/\\/www\.domain\.com"
+        ],
+        "to" : "http://localhost",
+        "regex" : true
+    }
 ]
 ```
 
@@ -93,4 +105,12 @@ heroku sync:dump --mysql-url mysql://test:test@test.com/test_db
 To connect to a database, simply type:
 ```
 heroku sync:connect environment_name
+```
+
+### help
+
+You can get more information about different commands with the help command.
+For example:
+```
+heroku help sync:dbsync
 ```
