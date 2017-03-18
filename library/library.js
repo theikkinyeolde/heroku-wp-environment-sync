@@ -6,10 +6,10 @@ const co        = require('co');
 const dotenv    = require('dotenv');
 const semver    = require('semver');
 
-const syncfile                  = 'syncfile.json';
+const syncfilename              = 'syncfile';
 const synclocalfile             = '.synclocal';
-const neededSyncFileVersion     = '0.1.7'
-const validDatabaseEnvs         = ['JAWSDB_URL', 'CLEARDB_DATABASE_URL'];
+const needed_sync_file_version  = '0.2.3'
+const valid_database_envs       = ['JAWSDB_URL', 'CLEARDB_DATABASE_URL'];
 
 function colorEnv (env, app) {
     if(!app)
@@ -18,7 +18,7 @@ function colorEnv (env, app) {
     return `${cli.color.yellow(env)} (${cli.color.app(app)})`;
 }
 
-function getEnvironmentObject (env, sync_to, heroku) {
+function getEnvironmentObject (env, sync_to, heroku, sync_config) {
     return co(function * () {
         var output_object = {
             name : env
@@ -131,8 +131,6 @@ function getEnvDatabaseConfig () {
                 'path' : './' + synclocalfile
             });
 
-            console.log(env_config_file);
-
             synclocal_used = true;
         } else {
             env_config_file = dotenv.config();
@@ -190,15 +188,25 @@ function configHasOption (config, option) {
     return false;
 }
 
-function getSyncFile (syncfile) {
-    if(!fs.existsSync(syncfile)) {
-        return cli.error(`Sync file (${syncfile}) does not exist.`);
+function getSyncFile () {
+    let syncfile = syncfilename + '.js';
+    let sync_config = {};
+
+    if(!fs.existsSync(process.cwd() + '/' + syncfile)) {
+        syncfile = syncfilename + '.json';
+
+        if(!fs.existsSync(syncfile)) {
+            return cli.error(`Sync file (${syncfile}) does not exist.`);
+        } else {
+            sync_config = JSON.parse(fs.readFileSync(syncfile, 'utf8'));
+        }
+
+    } else {
+        sync_config = require(process.cwd() + '/' + syncfile);
     }
 
-    sync_config = jsonfile.readFileSync(syncfile);
-
-    if(!sync_config.version || semver.gt(neededSyncFileVersion, sync_config.version)) {
-        return cli.error(`Your current syncfile seems to be too old. Needed syncfile version ${neededSyncFileVersion} and you have ${sync_config.version}. You better initialize the syncfile again.`);
+    if(!sync_config.version || semver.gt(needed_sync_file_version, sync_config.version)) {
+        return cli.error(`Your current syncfile seems to be too old. Needed syncfile version ${needed_sync_file_version} and you have ${sync_config.version}. You better initialize the syncfile again.`);
     }
 
     return sync_config;
@@ -330,7 +338,5 @@ module.exports = {
     getEnvDatabaseConfig : getEnvDatabaseConfig,
     getEnvironmentObject : getEnvironmentObject,
     validateDatabaseObject : validateDatabaseObject,
-    defaultsyncfile : syncfile,
-    defaultsynclocalfile : synclocalfile,
-    validDatabaseEnvs : validDatabaseEnvs
+    validDatabaseEnvs : valid_database_envs
 }

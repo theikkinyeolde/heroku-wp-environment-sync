@@ -4,10 +4,9 @@ const co          = require('co');
 const cli         = require('heroku-cli-util');
 const path        = require('path');
 const parseUrl    = require('parse-url');
+const esc_regex   = require('escape-string-regexp');
 const library     = require('../library/library.js');
 
-const syncfile              = library.defaultsyncfile;
-const synclocalfile         = library.defaultsynclocalfile;
 const valid_database_envs   = library.validDatabaseEnvs;
 
 function * run (context, heroku) {
@@ -34,7 +33,7 @@ function * run (context, heroku) {
             var app_data = yield yield heroku.get(`/apps/${prod_app}/`);
             prod_app_valid = true;
         } catch(error) {
-            console.log("No app with that name.");
+            cli.log("No app with that name.");
         }
     }
 
@@ -110,20 +109,27 @@ function * run (context, heroku) {
 
     cli.log(`Using database env variable ${current_database_env}.`);
 
-    replaces.push(["https://" + produrl, 'http://' + localurl]);
-    replaces.push(["http://" + produrl, 'http://' + localurl]);
-    replaces.push([produrl, localurl]);
+    replaces.push({
+                    "from" : [
+                        "https?:\\/\\/" + esc_regex(produrl)
+                    ],
+                    "to" : "http://" + localurl,
+                    "regex" : true
+                });
+
+    replaces.push({
+                    "from" : [
+                        esc_regex(produrl)
+                    ],
+                    "to" : localurl,
+                    "regex" : true
+                });
 
     var syncfile_template = {
         "name" : name,
         "defaultsetup" : "local",
         "version" : package_data.version,
         "setups" : [
-            {
-                "name" : "staging",
-                "from" : "production",
-                "to"   : "staging"
-            },
             {
                 "name" : "local",
                 "from" : "production",
@@ -137,31 +143,12 @@ function * run (context, heroku) {
                 "db_env" : current_database_env
             },
             {
-                "name" : "staging",
-                "app" : "",
-                "mutable" : true,
-                "db_env" : current_database_env,
-                "replaces" : [
-                    []
-                ],
-                "scripts" : {
-                    "before_sync" : [
-                    ],
-                    "after_sync" : [
-                    ],
-                    "before_fetch" : [
-                    ],
-                    "after_fetch" : [
-                    ]
-                }
-            },
-            {
                 "name" : "localhost",
                 "mutable" : true,
-                "replaces" : replaces,
                 "options" : [
                     "use_local_db"
                 ],
+                "replaces" : replaces,
                 "scripts" : {
                     "before_sync" : [
                     ],

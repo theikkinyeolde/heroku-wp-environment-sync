@@ -46,15 +46,15 @@ $option_schema = [
         'optional' => true
     ],
     [
-        'name' => 'replace',
+        'name' => 'search',
         'opts' => [
-            '--replace'
+            '--search'
         ]
     ],
     [
-        'name' => 'replace-with',
+        'name' => 'replace',
         'opts' => [
-            '--replace-with'
+            '--replace'
         ]
     ],
     [
@@ -62,6 +62,22 @@ $option_schema = [
         'opts' => [
             '--replace-json'
         ]
+    ],
+    [
+        'name' => 'regexp',
+        'opts' => [
+            '--regexp'
+        ],
+        'need_value' => false,
+        'optional' => true
+    ],
+    [
+        'name' => 'verbose',
+        'opts' => [
+            '--verbose'
+        ],
+        'need_value' => false,
+        'optional' => true
     ]
 ];
 
@@ -99,7 +115,7 @@ function validateSchemaName ($name) {
 function getArgumentData ($arguments) {
     $output_data = [];
 
-    if($arguments[0] == basename(__FILE__))
+    if(basename($arguments[0]) == basename(__FILE__))
         array_shift($arguments);
 
     $last_was_name = false;
@@ -112,10 +128,12 @@ function getArgumentData ($arguments) {
                 $last_name = $schema['name'];
                 $last_was_name = true;
             } else {
-                $output_data['unnamed'][] = $arg;
+                $arg = ltrim($arg, '--');
+                $output_data[$arg] = true;
             }
+
         } else {
-            $output_data['named'][$last_name] = $arg;
+            $output_data[$last_name] = $arg;
             $last_was_name = false;
         }
     }
@@ -123,20 +141,24 @@ function getArgumentData ($arguments) {
     return $output_data;
 }
 
-function recursiveObjectReplace ($object, $replace, $replace_with = "") {
+function recursiveObjectReplace ($object, $search, $replace = "", $regexp = false) {
     $output_data = "";
     if(is_string($object)) {
-        $output_data = str_replace($replace, $replace_with, $object);
+        if($regexp) {
+            $output_data = preg_replace("/" . $search . "/", $replace, $object);
+        } else {
+            $output_data = str_replace($search, $replace, $object);
+        }
     } else if(is_array($object)) {
         $output_data = array();
         foreach($object as $key => $value) {
-            $output_data[$key] = recursiveObjectReplace($value, $replace, $replace_with);
+            $output_data[$key] = recursiveObjectReplace($value, $search, $replace, $regexp);
         }
     } else if(is_object($object)) {
         $object = get_object_vars($object);
         $output_data = $object;
         foreach($object as $key => $value) {
-            $output_data->$key = recursiveObjectReplace($value, $replace, $replace_with);
+            $output_data->$key = recursiveObjectReplace($value, $search, $replace, $regexp);
         }
     } else {
         $output_data = $object;
@@ -147,11 +169,11 @@ function recursiveObjectReplace ($object, $replace, $replace_with = "") {
 
 $arguments = getArgumentData($argv);
 
-$username = $arguments['named']['user'];
-$password = (isset($arguments['named']['password'])) ? $arguments['named']['password'] : '';
-$port     = (isset($arguments['named']['port'])) ? $arguments['named']['port'] : 3306 ;
-$database = $arguments['named']['database'];
-$host = (isset($arguments['named']['host'])) ? $arguments['named']['host'] : 'localhost';
+$username = $arguments['user'];
+$password = (isset($arguments['password'])) ? $arguments['password'] : '';
+$port     = (isset($arguments['port'])) ? $arguments['port'] : 3306 ;
+$database = $arguments['database'];
+$host = (isset($arguments['host'])) ? $arguments['host'] : 'localhost';
 
 if(empty($username) || empty($database)) {
     die("No username or database specified.");
@@ -163,12 +185,11 @@ if($mysql->connect_error) {
     die("Error connecting to mysql. (" . $mysql->connect_error . ")");
 }
 
-
-$replace = (string) $arguments['named']['replace'];
-$replace_with = (string) $arguments['named']['replace-with'];
+$search = (string) $arguments['search'];
+$replace = (string) $arguments['replace'];
 
 $column_type_like = '';
-if(preg_match("/[a-zA-Z]/", $replace.$replace_with)) {
+if(preg_match("/[a-zA-Z]/", $search.$replace)) {
     foreach($search_column_types as $type) {
         if(!empty($column_type_like))
             $column_type_like .= " OR ";
@@ -185,13 +206,17 @@ if(preg_match("/[a-zA-Z]/", $replace.$replace_with)) {
 
 $tables = $mysql->query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '" . $mysql->real_escape_string($database) . "'");
 
-if($tables && !empty($replace) && !empty($replace_with)) {
+$updated_rows = 0;
+
+if($tables && !empty($search) && !empty($replace)) {
     foreach($tables->fetch_all(MYSQLI_ASSOC) as $table) {
         $table_name = $table['TABLE_NAME'];
 
         $primary_key = $mysql->query("SHOW INDEX FROM " . $table_name . " WHERE Key_name = 'PRIMARY'")->fetch_array()['Column_name'];
 
-        echo "\n" . $table_name;
+        if(isset($arguments['verbose']) && $arguments['verbose']) {
+            echo $table_name . "\n";
+        }
 
         if($primary_key) {
             $columns = $mysql->query("SELECT COLUMN_NAME, COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '" . $mysql->real_escape_string($database) . "' AND TABLE_NAME = '" . $table_name . "'" . $column_type_like);
@@ -204,7 +229,12 @@ if($tables && !empty($replace) && !empty($replace_with)) {
                 $column_name = $column['COLUMN_NAME'];
                 $column_type = $column['COLUMN_TYPE'];
 
-                $rows = $mysql->query("SELECT " . $primary_key . ", " . $column_name . " FROM " . $table_name . " WHERE " . $column_name . " LIKE '%" . $mysql->real_escape_string($replace) . "%'");
+                $like_sql = "LIKE '%" . $mysql->real_escape_string($search) . "%'";
+
+                if(isset($arguments['regexp']) && $arguments['regexp'])
+                    $like_sql = "REGEXP '" . $mysql->real_escape_string($search) . "'";
+
+                $rows = $mysql->query("SELECT " . $primary_key . ", " . $column_name . " FROM " . $table_name . " WHERE " . $column_name . " " . $like_sql);
 
                 if(!$rows)
                     continue;
@@ -212,22 +242,33 @@ if($tables && !empty($replace) && !empty($replace_with)) {
                 foreach($rows->fetch_all(MYSQLI_ASSOC) as $data) {
                     $unserialized_data = @unserialize($data[$column_name]);
 
-
                     if($unserialized_data === FALSE) {
-                        $update = $mysql->query("UPDATE " . $table_name . " SET " . $column_name . " = REPLACE(" . $column_name . ", '" . $mysql->real_escape_string($replace) . "', '" . $mysql->real_escape_string($replace_with) . "') WHERE " . $primary_key . " = '" . $data[$primary_key] . "'");
+                        if(isset($arguments['regexp']) && $arguments['regexp']) {
+                            $new_data = preg_replace("/" . $search . "/", $replace, $data[$column_name]);
+
+                            $update = $mysql->query("UPDATE " . $table_name . " SET " . $column_name . " = '" . $mysql->real_escape_string($new_data) . "' WHERE " . $primary_key . " = '" . $data[$primary_key] . "'");
+                        } else {
+                            $update = $mysql->query("UPDATE " . $table_name . " SET " . $column_name . " = REPLACE(" . $column_name . ", '" . $mysql->real_escape_string($search) . "', '" . $mysql->real_escape_string($replace) . "') WHERE " . $primary_key . " = '" . $data[$primary_key] . "'");
+                        }
                     } else {
 
-                        $unserialized_data = recursiveObjectReplace($unserialized_data, $replace, $replace_with);
+                        $unserialized_data = recursiveObjectReplace($unserialized_data, $search, $replace, (isset($arguments['regexp']) && $arguments['regexp']));
 
                         $serialized_data = serialize($unserialized_data);
 
                         $update = $mysql->query("UPDATE " . $table_name . " SET " . $column_name . " = '" . $mysql->real_escape_string($serialized_data) . "' WHERE " . $primary_key . " = '" . $data[$primary_key] . "'");
+                    }
+
+                    if($update) {
+                        $updated_rows += $mysql->affected_rows;
                     }
                 }
             }
         }
     }
 }
+
+echo $updated_rows;
 
 $mysql->close();
 

@@ -15,8 +15,6 @@ var silent = true;
 
 var cmd = library.cmd;
 
-const syncfile  = 'syncfile.json';
-
 function * run (context, heroku) {
     let connect_to = "";
 
@@ -36,7 +34,7 @@ function * run (context, heroku) {
 
         connect_to = `${cli.color.app(app)}`;
     } else {
-        let sync_config = library.getSyncFile(syncfile);
+        let sync_config = library.getSyncFile();
 
         if(!sync_config) {
             return sync_config;
@@ -47,7 +45,7 @@ function * run (context, heroku) {
         if(!env)
             return cli.error(`No environment parameter given.`);
 
-        environment_config = yield library.getEnvironmentObject(env, false, heroku);
+        environment_config = yield library.getEnvironmentObject(env, false, heroku, sync_config);
 
         if(!environment_config)
             return environment_config;

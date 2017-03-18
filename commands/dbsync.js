@@ -13,9 +13,6 @@ const library         = require('../library/library.js');
 
 const colorEnv        = library.colorEnv;
 
-const syncfile        = library.defaultsyncfile;
-const synclocalfile   = library.defaultsynclocalfile;
-
 var sync_config = {};
 var heroku = {};
 var silent = true;
@@ -66,9 +63,8 @@ function runCommandsByName (name, env_config) {
 
 function * run (context, h) {
     heroku = h;
-    var silent = true;
 
-    sync_config = library.getSyncFile(syncfile);
+    let sync_config = library.getSyncFile();
 
     if(!sync_config) {
         return sync_config;
@@ -158,7 +154,7 @@ function * run (context, h) {
         }
     }
 
-    var from = yield library.getEnvironmentObject(setup_config.from, false, heroku);
+    var from = yield library.getEnvironmentObject(setup_config.from, false, heroku, sync_config);
     var tos = [];
 
     if(!from) {
@@ -167,13 +163,13 @@ function * run (context, h) {
 
     if(typeof setup_config.to == 'object') {
         for(let t in setup_config.to) {
-            let envconf = yield library.getEnvironmentObject(setup_config.to[t], !context.flags["no-mutable-checks"], heroku);
+            let envconf = yield library.getEnvironmentObject(setup_config.to[t], !context.flags["no-mutable-checks"], heroku, sync_config);
 
             if(envconf)
                 tos.push(envconf);
         }
     } else  if(typeof setup_config.to == 'string') {
-        let envconf = yield library.getEnvironmentObject(setup_config.to, !context.flags["no-mutable-checks"], heroku);
+        let envconf = yield library.getEnvironmentObject(setup_config.to, !context.flags["no-mutable-checks"], heroku, sync_config);
 
         if(envconf)
             tos.push(envconf);
@@ -258,29 +254,44 @@ function * run (context, h) {
 
         if(!context.flags['no-replace']) {
             for(let r in to_config.replaces) {
-                let replace_from = to_config.replaces[r][0];
-                let replace_to = to_config.replaces[r][1];
+                let replace_from = to_config.replaces[r]['from'];
+                let replace_to = to_config.replaces[r]['to'];
+                let replace_regexp = (to_config.replaces[r]['regex'] != undefined) ? to_config.replaces[r]['regex'] : false;
 
-                let replace_exec_command = `php ${path.resolve(__dirname, "../")}/sar.php --user ${tmp_mysql_db.user} `;
-
-                if(tmp_mysql_db.pass) {
-                    replace_exec_command += `--pass ${tmp_mysql_db.pass} `;
+                let rfroms = [];
+                if(typeof(replace_from) == 'object') {
+                    rfroms = replace_from;
+                } else if(typeof(replace_from) == 'string') {
+                    rfroms = [replace_from];
                 }
 
-                replace_exec_command += `--host ${tmp_mysql_db.host} --db ${tmp_mysql_db.db} --replace ${replace_from} --replace-with ${replace_to}`;
+                for(let rf in rfroms) {
+                    let current_replace_from = rfroms[rf];
+                    let replace_exec_command = `php ${path.resolve(__dirname, "../")}/sar.php --user ${tmp_mysql_db.user} `;
 
-                cmd.log(`Replacing "${cli.color.green(replace_from)}" to "${cli.color.green(replace_to)}"`);
+                    if(tmp_mysql_db.pass) {
+                        replace_exec_command += `--pass ${tmp_mysql_db.pass} `;
+                    }
 
-                shell.exec(replace_exec_command, {silent : silent});
+                    replace_exec_command += `--host ${tmp_mysql_db.host} --db ${tmp_mysql_db.db} --search "${current_replace_from}" --replace "${replace_to}"`;
+
+                    if(replace_regexp) {
+                        replace_exec_command += ` --regexp`;
+                    }
+
+                    let replace_return = shell.exec(replace_exec_command, {silent : silent});
+
+                    cmd.log(`Replaced "${cli.color.green(current_replace_from)}" to "${cli.color.green(replace_to)}" with ${cli.color.green(replace_return)} rows replaced.`);
+                }
             }
         }
 
         cmd.log(`Pushing the mysql database to ${colorEnv(to_config.name, to_config.app)}.`);
 
-        shell.exec(`mysqldump ${mysql_command_auth} ${tmp_mysql_db.db} ${additional_mysqldump_parameters} > ${to_tmpfile.name}`);
+        shell.exec(`mysqldump ${mysql_command_auth} ${tmp_mysql_db.db} ${additional_mysqldump_parameters} > ${to_tmpfile.name}`, {silent : silent});
 
         if(context.flags['store-dumps']) {
-            shell.exec(`cp ${to_tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${tos[t].name}.sql`);
+            shell.exec(`cp ${to_tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${tos[t].name}.sql`, {silent : silent});
         }
 
 
