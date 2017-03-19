@@ -46,6 +46,10 @@ function getEnvironmentObject (env, sync_to, heroku, sync_config) {
         let heroku_config, heroku_config_vars;
 
         if(config.app != undefined && config.app != '') {
+            if(!(yield validateApp(config.app, heroku))) {
+                return cli.error(`Environment ${colorEnv(env)} doesn't have a valid app.`);
+            }
+
             heroku_config_vars = yield heroku.get(`/apps/${config.app}/config-vars`);
             heroku_config = yield heroku.get(`/apps/${config.app}`);
             output_object.db = dburl(getDatabaseUrlFromConfig(env, heroku_config_vars, sync_config));
@@ -90,6 +94,17 @@ function getEnvironmentObject (env, sync_to, heroku, sync_config) {
         }
 
         return yield Promise.resolve(output_object);
+    });
+}
+
+function validateApp (app, heroku) {
+    return co(function * () {
+        try {
+            let app_data = yield heroku.get(`/apps/${app}/`);
+            return yield Promise.resolve(true);
+        } catch(error) {
+            return yield Promise.resolve(false);
+        }
     });
 }
 
@@ -339,5 +354,6 @@ module.exports = {
     getEnvironmentObject : getEnvironmentObject,
     validateDatabaseObject : validateDatabaseObject,
     validDatabaseEnvs : valid_database_envs,
-    defaultSyncFilename : syncfilename
+    defaultSyncFilename : syncfilename,
+    validateApp : validateApp
 }

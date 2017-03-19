@@ -29,10 +29,9 @@ function * run (context, heroku) {
 
         cli.log(`Validating the production app.`);
 
-        try {
-            var app_data = yield yield heroku.get(`/apps/${prod_app}/`);
+        if((yield library.validateApp(prod_app, heroku))) {
             prod_app_valid = true;
-        } catch(error) {
+        } else {
             cli.log("No app with that name.");
         }
     }
