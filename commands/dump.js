@@ -78,26 +78,36 @@ function * run (context, heroku) {
     if(!library.validateDatabaseObject(database))
         return;
 
+    let directory = './';
+
     let filename = filename_prefix + dateformat(new Date(), "dd_mm_yyyy_HH_MM") + `.sql`;
 
-    let location = path.resolve('./') + '/' + filename;
+    let output_flag = context.flags.output;
 
-    if(context.flags.file) {
-        location = context.flags.file;
+    if(output_flag) {
+        if(fs.existsSync(output_flag)) {
+            if(fs.statSync(output_flag).isDirectory()) {
+                directory = output_flag;
+            } else {
+                filename = output_flag;
+            }
+        } else {
+            if(output_flag[output_flag - 1] == '/') {
+                directory = output_flag;
+            } else {
+                filename = output_flag;
+            }
+        }
     }
 
-    if(fs.existsSync(location)) {
-        if(fs.statSync(location).isDirectory()) {
-            location = path.resolve(location) + "/" + filename;
-        }
-    } else {
+    let location = path.resolve(directory) + '/' + filename;
+
+    if(!fs.existsSync(location)) {
         let dir = path.resolve(path.dirname(location));
 
         if(!fs.existsSync(dir)) {
             shell.mkdir('-p', dir);
         }
-
-        location = path.resolve(location);
     }
 
     cmd.noLog("Dumping database.");
@@ -155,8 +165,9 @@ module.exports = {
     ],
     flags : [
         {
-            name : "file",
-            description : "The file to which to dump.",
+            name : "output",
+            char : 'o',
+            description : "The file or directory to which to dump.",
             hasValue : true
         },
         {
