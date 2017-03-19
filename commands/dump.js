@@ -15,6 +15,9 @@ var silent = true;
 var cmd = library.cmd;
 
 function * run (context, heroku) {
+    if(context.flags['show-command-outputs']) {
+        silent = false;
+    }
 
     cmd.setShow(!context.flags.hide);
     cmd.setForce(context.flags.force);
@@ -174,12 +177,20 @@ module.exports = {
         },
         {
             name : "hide",
+            char : 'h',
             description : "Hide all log texts.",
             hasValue : false
         },
         {
             name : "lock-database",
+            char : 'l',
             description : "Lock the database during the dumping process.",
+            hasValue : false
+        },
+        {
+            name : "show-command-outputs",
+            char : "c",
+            description : "Show command outputs.",
             hasValue : false
         }
     ],

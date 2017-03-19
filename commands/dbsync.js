@@ -28,13 +28,13 @@ function runCommands (commands) {
         if(commands.length == 0)
             return;
 
-        shell.exec(commands);
+        shell.exec(commands, {silent : silent});
     } else if (typeof(commands) == 'object') {
         for(let c in commands) {
             if(commands[c].length == 0)
                 continue;
 
-            shell.exec(commands[c]);
+            shell.exec(commands[c], {silent : silent});
         }
     }
 }
@@ -68,6 +68,10 @@ function * run (context, h) {
 
     if(!sync_config) {
         return sync_config;
+    }
+
+    if(context.flags['show-command-outputs']) {
+        silent = false;
     }
 
     cmd.setShow(!context.flags.hide);
@@ -226,7 +230,7 @@ function * run (context, h) {
     runCommandsByName("after_fetch", from);
 
     if(context.flags['store-dumps']) {
-        shell.exec(`cp ${tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${from.name}.sql`);
+        shell.exec(`cp ${tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${from.name}.sql`, {silent : silent});
     }
 
     let mysql_command_auth = `-u${tmp_mysql_db.user} -h${tmp_mysql_db.host} `;
@@ -237,7 +241,7 @@ function * run (context, h) {
 
     cmd.log(`Creating a temporary database (${tmp_mysql_db.db}).`);
 
-    shell.exec(`mysqladmin ${mysql_command_auth} create ${tmp_mysql_db.db}`);
+    shell.exec(`mysqladmin ${mysql_command_auth} create ${tmp_mysql_db.db}`, {silent : silent});
 
     process.on('SIGINT', function() {});
 
@@ -247,7 +251,7 @@ function * run (context, h) {
 
         runCommandsByName("before_sync", tos[t]);
 
-        shell.exec(`mysql ${mysql_command_auth} ${tmp_mysql_db.db} < ${tmpfile.name}`);
+        shell.exec(`mysql ${mysql_command_auth} ${tmp_mysql_db.db} < ${tmpfile.name}`, {silent : silent});
 
         let to_config = tos[t];
         let to_tmpfile = tmp.fileSync();
@@ -314,7 +318,7 @@ function * run (context, h) {
 
     cmd.log(`Deleting the temporary database.`);
 
-    shell.exec(`mysql ${mysql_command_auth} -e "drop database ${tmp_mysql_db.db};"`);
+    shell.exec(`mysql ${mysql_command_auth} -e "drop database ${tmp_mysql_db.db};"`, {silent : silent});
 
     cmd.log();
     cmd.header(`It is done.`);
@@ -366,6 +370,7 @@ module.exports = {
         },
         {
             name : "hide",
+            char : 'h',
             description : "Hide all log texts.",
             hasValue : false
         },
@@ -376,17 +381,26 @@ module.exports = {
         },
         {
             name : "no-replace",
+            char : 'r',
             description : "Skip the search and replace part of the sync.",
             hasValue : false
         },
         {
             name : "lock-database",
+            char : 'l',
             description : "Lock the database during the dumping process.",
             hasValue : false
         },
         {
             name : "store-dumps",
+            char : 's',
             description : "Store dumps for later use.",
+            hasValue : false
+        },
+        {
+            name : "show-command-outputs",
+            char : "c",
+            description : "Show command outputs.",
             hasValue : false
         }
     ],

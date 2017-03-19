@@ -107,7 +107,7 @@ To connect to a database, simply type:
 heroku sync:connect environment_name
 ```
 
-### help
+### Help
 
 You can get more information about different commands with the help command.
 For example:

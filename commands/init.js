@@ -145,9 +145,6 @@ function * run (context, heroku) {
             {
                 "name" : "localhost",
                 "mutable" : true,
-                "options" : [
-                    "use_local_db"
-                ],
                 "replaces" : replaces,
                 "scripts" : {
                     "before_sync" : [
@@ -158,7 +155,10 @@ function * run (context, heroku) {
                     ],
                     "after_fetch" : [
                     ]
-                }
+                },
+                "options" : [
+                    "use_local_db"
+                ]
             }
         ]
     };
