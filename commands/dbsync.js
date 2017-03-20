@@ -243,6 +243,10 @@ function * run (context, h) {
 
     shell.exec(`mysqladmin ${mysql_command_auth} create ${tmp_mysql_db.db}`, {silent : silent});
 
+    if(shell.error()) {
+        return cli.error(`Error connecting to mysql server.`);
+    }
+
     process.on('SIGINT', function() {});
 
     for(let t in tos) {
@@ -297,7 +301,6 @@ function * run (context, h) {
         if(context.flags['store-dumps']) {
             shell.exec(`cp ${to_tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${tos[t].name}.sql`, {silent : silent});
         }
-
 
         let to_mysql_auth = `-u${tos[t].db.user} -h${tos[t].db.host} `;
 
