@@ -15,6 +15,8 @@ var silent = true;
 var cmd = library.cmd;
 
 function * run (context, heroku) {
+    yield library.checkVersion();
+
     let connect_to = "";
 
     if(context.flags['app']) {

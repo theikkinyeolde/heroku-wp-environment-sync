@@ -1,14 +1,38 @@
-const cli       = require('heroku-cli-util');
-const dburl     = require('parse-db-url');
-const fs        = require('fs');
-const co        = require('co');
-const dotenv    = require('dotenv');
-const semver    = require('semver');
+const cli           = require('heroku-cli-util');
+const dburl         = require('parse-db-url');
+const fs            = require('fs');
+const co            = require('co');
+const dotenv        = require('dotenv');
+const semver        = require('semver');
+const path          = require('path');
+const request       = require('co-request');
+const dateformat    = require('dateformat');
 
 const syncfilename              = 'syncfile';
 const synclocalfile             = '.synclocal';
 const needed_sync_file_version  = '0.2.3'
 const valid_database_envs       = ['JAWSDB_URL', 'CLEARDB_DATABASE_URL'];
+
+function checkVersion () {
+    return co(function * () {
+        let data = yield request({
+            url : 'http://registry.npmjs.org/heroku-wp-environment-sync',
+            json : true
+        });
+
+        if(Object.keys(data.body).length == 0)
+            return;
+
+        let package_data = require(path.resolve(__dirname + '/../package.json'));
+
+        let remote_version = data.body['dist-tags'].latest;
+        let local_version = package_data.version;
+
+        if(semver.gt(remote_version, local_version)) {
+            cli.warn(`There is an update (${cli.color.cyan(remote_version)}) to this plugin. Update it using the heroku update -command.`);
+        }
+    });
+}
 
 function colorEnv (env, app) {
     if(!app)
@@ -90,6 +114,10 @@ function getEnvironmentObject (env, sync_to, heroku, sync_config) {
 
         if(config.scripts != undefined) {
             output_object.scripts = config.scripts;
+        }
+
+        if(config.backup_before_sync) {
+            output_object.backup_before_sync = config.backup_before_sync;
         }
 
         return yield Promise.resolve(output_object);
@@ -316,7 +344,7 @@ var cmd = {
 
             confirmation = confirmation.toLowerCase();
 
-            if(confirmation == "yes") {
+            if(confirmation == "yes" ||  confirmation == "y") {
                 return yield Promise.resolve(true);
             } else {
                 return yield Promise.resolve(false);
@@ -333,7 +361,7 @@ function confirmPrompt (msg) {
 
         confirmation = confirmation.toLowerCase();
 
-        if(confirmation == "yes") {
+        if(confirmation == "yes" || confirmation == "y") {
             return yield Promise.resolve(true);
         } else {
             return yield Promise.resolve(false);
@@ -382,6 +410,35 @@ function runCommandsByName (name, env_config) {
     return false;
 }
 
+function generateDumpFilename (output, prefix, createdir) {
+    let directory = './';
+
+    let filename = prefix + dateformat(new Date(), "dd_mm_yyyy_HH_MM") + `.sql`;
+
+    if(output) {
+        if(output[output.length - 1] == '/') {
+            directory = output;
+        } else {
+            filename = path.basename(output);
+            directory = path.dirname(output);
+        }
+    }
+
+    let location = path.resolve(directory) + '/' + filename;
+
+    if(createdir) {
+        if(!fs.existsSync(location)) {
+            let dir = path.resolve(path.dirname(location));
+
+            if(!fs.existsSync(dir)) {
+                shell.mkdir('-p', dir);
+            }
+        }
+    }
+
+    return location;
+}
+
 module.exports = {
     getDatabaseUrlFromConfig : getDatabaseUrlFromConfig,
     getEnvironmentConfig : getEnvironmentConfig,
@@ -398,5 +455,7 @@ module.exports = {
     validateApp : validateApp,
     runCommandsByName : runCommandsByName,
     getCommandsByName : getCommandsByName,
-    runCommands : runCommands
+    runCommands : runCommands,
+    generateDumpFilename : generateDumpFilename,
+    checkVersion : checkVersion
 }

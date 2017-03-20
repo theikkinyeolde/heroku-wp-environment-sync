@@ -24,6 +24,8 @@ var cmd = library.cmd;
 function * run (context, h) {
     heroku = h;
 
+    yield library.checkVersion();
+
     let sync_config = library.getSyncFile();
 
     if(!sync_config) {
@@ -273,6 +275,18 @@ function * run (context, h) {
 
         if(tos[t].db.password)
             to_mysql_auth += `-p${tos[t].db.password}`;
+
+        if(tos[t].backup_before_sync) {
+            let location;
+
+            if(to_config.backup_before_sync === true) {
+                location = library.generateDumpFilename(false, `heroku_wp_${tos[t].name}_`, true);
+            } else if(typeof(to_config.backup_before_sync) == 'string') {
+                location = library.generateDumpFilename(to_config.backup_before_sync, `heroku_wp_${tos[t].name}_`, true);
+            }
+
+            shell.exec(`mysqldump ${to_mysql_auth} ${tos[t].db.database} > ${location}`, {silent : silent});
+        }
 
         shell.exec(`mysql ${to_mysql_auth} ${tos[t].db.database} < ${to_tmpfile.name}`, {silent : silent});
 

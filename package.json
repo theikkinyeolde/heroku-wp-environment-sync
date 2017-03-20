@@ -14,8 +14,8 @@
   "author": "Taneli Heikkinen",
   "license": "MIT",
   "dependencies": {
-    "blessed": "^0.1.81",
     "co": "^4.6.0",
+    "co-request": "^1.0.0",
     "dateformat": "^2.0.0",
     "dotenv": "^4.0.0",
     "escape-string-regexp": "^1.0.5",
