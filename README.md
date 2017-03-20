@@ -2,6 +2,8 @@
 
 A heroku plugin to sync different wordpress environments. Especially to sync databases, ya hear?
 
+[![Build Status](https://travis-ci.org/taneliheikkinen/heroku-wp-environment-sync.svg?branch=master)](https://travis-ci.org/taneliheikkinen/heroku-wp-environment-sync)
+
 ## Requirements
 
 - Heroku cli (https://devcenter.heroku.com/articles/heroku-cli)
