@@ -39,6 +39,8 @@ The search and replaces can be added as many as needed and are defined as follow
 ]
 ```
 
+Every string in the "from" array is changed into the "to" string, so you can funnel multiple urls into one.
+
 You can also use regular expression in the search and replace with the regex -option, like so:
 ```
 "replaces" : [
