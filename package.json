@@ -1,6 +1,6 @@
 {
   "name": "heroku-wp-environment-sync",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "A heroku plugin to sync different wordpress environments.",
   "main": "index.js",
   "scripts": {

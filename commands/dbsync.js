@@ -16,50 +16,10 @@ const colorEnv        = library.colorEnv;
 var sync_config = {};
 var heroku = {};
 var silent = true;
+var run_scripts = true;
 var tmp_mysql_db = {};
 
 var cmd = library.cmd;
-
-function runCommands (commands) {
-    if(typeof(commands) == undefined)
-        return;
-
-    if(typeof(commands) == 'string') {
-        if(commands.length == 0)
-            return;
-
-        shell.exec(commands, {silent : silent});
-    } else if (typeof(commands) == 'object') {
-        for(let c in commands) {
-            if(commands[c].length == 0)
-                continue;
-
-            shell.exec(commands[c], {silent : silent});
-        }
-    }
-}
-
-function getCommandsByName(name, env_config) {
-    if(env_config.scripts != undefined) {
-        for(let s in env_config.scripts) {
-            if(s == name) {
-                return env_config.scripts[s];
-            }
-        }
-    }
-
-    return false;
-}
-
-function runCommandsByName (name, env_config) {
-    let commands = getCommandsByName(name, env_config)
-
-    if(commands != false) {
-        return runCommands(commands);
-    }
-
-    return false;
-}
 
 function * run (context, h) {
     heroku = h;
@@ -68,6 +28,10 @@ function * run (context, h) {
 
     if(!sync_config) {
         return sync_config;
+    }
+
+    if(context.flags['skip-scripts']) {
+        run_scripts = false;
     }
 
     if(context.flags['show-command-outputs']) {
@@ -223,11 +187,13 @@ function * run (context, h) {
 
     cmd.log(`Getting the database from ${colorEnv(from.name, from.app)}`);
 
-    runCommandsByName("before_fetch", from);
+    if(run_scripts)
+        library.runCommandsByName("before_fetch", from);
 
     shell.exec(`mysqldump -u${from.db.user} -p${from.db.password} -h${from.db.host} ${from.db.database} ${additional_mysqldump_parameters} > ${tmpfile.name}`, {silent : silent});
 
-    runCommandsByName("after_fetch", from);
+    if(run_scripts)
+        library.runCommandsByName("after_fetch", from);
 
     if(context.flags['store-dumps']) {
         shell.exec(`cp ${tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${from.name}.sql`, {silent : silent});
@@ -253,7 +219,8 @@ function * run (context, h) {
         cmd.log();
         cmd.header(`Syncing ${cli.color.yellow(from.name)}' to '${cli.color.yellow(tos[t].name)}'`);
 
-        runCommandsByName("before_sync", tos[t]);
+        if(run_scripts)
+            library.runCommandsByName("before_sync", tos[t]);
 
         shell.exec(`mysql ${mysql_command_auth} ${tmp_mysql_db.db} < ${tmpfile.name}`, {silent : silent});
 
@@ -309,7 +276,8 @@ function * run (context, h) {
 
         shell.exec(`mysql ${to_mysql_auth} ${tos[t].db.database} < ${to_tmpfile.name}`, {silent : silent});
 
-        runCommandsByName("after_sync", tos[t]);
+        if(run_scripts)
+            library.runCommandsByName("after_sync", tos[t]);
 
         if(tos[t].redis != undefined) {
             cmd.log("Redis found. Flushing it.");
@@ -404,6 +372,11 @@ module.exports = {
             name : "show-command-outputs",
             char : "c",
             description : "Show command outputs.",
+            hasValue : false
+        },
+        {
+            name : 'skip-scripts',
+            description : 'Skip the script running part.',
             hasValue : false
         }
     ],

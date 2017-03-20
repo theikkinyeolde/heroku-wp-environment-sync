@@ -1,7 +1,6 @@
 const cli       = require('heroku-cli-util');
 const dburl     = require('parse-db-url');
 const fs        = require('fs');
-const jsonfile  = require('jsonfile');
 const co        = require('co');
 const dotenv    = require('dotenv');
 const semver    = require('semver');
@@ -342,6 +341,47 @@ function confirmPrompt (msg) {
     });
 }
 
+function runCommands (commands) {
+    if(typeof(commands) == undefined)
+        return;
+
+    if(typeof(commands) == 'string') {
+        if(commands.length == 0)
+            return;
+
+        shell.exec(commands, {silent : silent});
+    } else if (typeof(commands) == 'object') {
+        for(let c in commands) {
+            if(commands[c].length == 0)
+                continue;
+
+            shell.exec(commands[c], {silent : silent});
+        }
+    }
+}
+
+function getCommandsByName(name, env_config) {
+    if(env_config.scripts != undefined) {
+        for(let s in env_config.scripts) {
+            if(s == name) {
+                return env_config.scripts[s];
+            }
+        }
+    }
+
+    return false;
+}
+
+function runCommandsByName (name, env_config) {
+    let commands = getCommandsByName(name, env_config)
+
+    if(commands != false) {
+        return runCommands(commands);
+    }
+
+    return false;
+}
+
 module.exports = {
     getDatabaseUrlFromConfig : getDatabaseUrlFromConfig,
     getEnvironmentConfig : getEnvironmentConfig,
@@ -355,5 +395,8 @@ module.exports = {
     validateDatabaseObject : validateDatabaseObject,
     validDatabaseEnvs : valid_database_envs,
     defaultSyncFilename : syncfilename,
-    validateApp : validateApp
+    validateApp : validateApp,
+    runCommandsByName : runCommandsByName,
+    getCommandsByName : getCommandsByName,
+    runCommands : runCommands
 }

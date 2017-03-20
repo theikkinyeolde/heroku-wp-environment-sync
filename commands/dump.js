@@ -1,6 +1,5 @@
 const cli           = require('heroku-cli-util');
 const co            = require('co');
-const jsonfile      = require('jsonfile');
 const dburl         = require('parse-db-url');
 const dateformat    = require('dateformat');
 const path          = require('path');

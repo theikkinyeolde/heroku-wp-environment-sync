@@ -1,5 +1,4 @@
 const fs          = require('fs');
-const jsonfile    = require('jsonfile');
 const co          = require('co');
 const cli         = require('heroku-cli-util');
 const path        = require('path');
@@ -132,7 +131,17 @@ function * run (context, heroku) {
             {
                 "name" : "local",
                 "from" : "production",
-                "to"   : "localhost"
+                "to"   : "localhost",
+                "scripts" : {
+                    "before_sync" : [
+                    ],
+                    "after_sync" : [
+                    ],
+                    "before_fetch" : [
+                    ],
+                    "after_fetch" : [
+                    ]
+                },
             }
         ],
         "environments" : [
