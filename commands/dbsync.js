@@ -244,7 +244,7 @@ function * run (context, h) {
     shell.exec(`mysqladmin ${mysql_command_auth} create ${tmp_mysql_db.db}`, {silent : silent});
 
     if(shell.error()) {
-        return cli.error(`Error connecting to mysql server.`);
+        return cli.error(`Error connecting to mysql server in host ${cli.color.magenta(tmp_mysql_db.host)}.`);
     }
 
     process.on('SIGINT', function() {});
