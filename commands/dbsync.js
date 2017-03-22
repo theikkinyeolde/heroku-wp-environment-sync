@@ -321,6 +321,14 @@ function * run (context, h) {
             cmd.log(`The dump for ${tos[t].name} is located in: ${os.tmpdir()}/heroku_wp_environment_sync_${tos[t].name}.sql`);
         }
     }
+
+    if(context.flags['open-browser']) {
+        cli.open(from.url);
+
+        for(let t in tos) {
+            cli.open(tos[t].url);
+        }
+    }
 }
 
 module.exports = {
@@ -391,6 +399,11 @@ module.exports = {
         {
             name : 'skip-scripts',
             description : 'Skip the script running part.',
+            hasValue : false
+        },
+        {
+            name : "open-browser",
+            description : "Open all affected locations in browser after sync.",
             hasValue : false
         }
     ],

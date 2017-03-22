@@ -7,6 +7,7 @@ const semver        = require('semver');
 const path          = require('path');
 const request       = require('co-request');
 const dateformat    = require('dateformat');
+const shell         = require('shelljs');
 
 const syncfilename              = 'syncfile';
 const synclocalfile             = '.synclocal';
@@ -15,21 +16,25 @@ const valid_database_envs       = ['JAWSDB_URL', 'CLEARDB_DATABASE_URL'];
 
 function checkVersion () {
     return co(function * () {
-        let data = yield request({
-            url : 'http://registry.npmjs.org/heroku-wp-environment-sync',
-            json : true
-        });
+        try {
+            let data = yield request({
+                url : 'http://registry.npmjs.org/heroku-wp-environment-sync',
+                json : true
+            });
 
-        if(Object.keys(data.body).length == 0)
-            return;
+            if(Object.keys(data.body).length == 0)
+                return;
 
-        let package_data = require(path.resolve(__dirname + '/../package.json'));
+            let package_data = require(path.resolve(__dirname + '/../package.json'));
 
-        let remote_version = data.body['dist-tags'].latest;
-        let local_version = package_data.version;
+            let remote_version = data.body['dist-tags'].latest;
+            let local_version = package_data.version;
 
-        if(semver.gt(remote_version, local_version)) {
-            cli.warn(`There is an update (${cli.color.cyan(remote_version)}) to this plugin. Update it using the heroku update -command.`);
+            if(semver.gt(remote_version, local_version)) {
+                cli.warn(`There is an update (${cli.color.cyan(remote_version)}) to this plugin. Update it using the heroku update -command.`);
+            }
+        } catch (error) {
+
         }
     });
 }
@@ -75,7 +80,11 @@ function getEnvironmentObject (env, sync_to, heroku, sync_config) {
 
             heroku_config_vars = yield heroku.get(`/apps/${config.app}/config-vars`);
             heroku_config = yield heroku.get(`/apps/${config.app}`);
+
+            output_object.url = heroku_config.web_url;
+
             output_object.db = dburl(getDatabaseUrlFromConfig(env, heroku_config_vars, sync_config));
+
         } else if(configHasOption(config, "use_local_db")){
             let env_config = yield getEnvDatabaseConfig();
 
@@ -92,10 +101,14 @@ function getEnvironmentObject (env, sync_to, heroku, sync_config) {
                 host : env_config.parsed.DB_HOST,
                 database : env_config.parsed.DB_NAME,
                 user : env_config.parsed.DB_USER,
-                pass : pass
+                password : pass
             };
         } else {
             return cli.error(`Environment ${cli.color.yellow(env)} doesn't have a app defined, or it isn't a local.`);
+        }
+
+        if(!(yield dbCheck(output_object.db.host, output_object.db.user, output_object.db.password, output_object.db.database))) {
+            return cli.error(`Could not access the database of environment ${cli.color.yellow(env)}.`);
         }
 
         if(output_object.db == undefined) {
@@ -140,13 +153,17 @@ function getEnvDatabaseConfig () {
         let env_config_file = {parsed : {}};
         let synclocal_used = false;
 
+        let synclocal_creation_reason = "";
+
         if(fs.existsSync(synclocalfile)) {
             env_config_file = dotenv.config({
                 'path' : './' + synclocalfile
             });
 
             synclocal_used = true;
-        } else if(!fs.existsSync('.env')) {
+        } else if(fs.existsSync(".env")) {
+            env_config_file = dotenv.config();
+        } else {
             cli.log(`Okay, here's the deal.`);
             cli.log(`Your .env file doesn't exist and you don't seem to have a .synclocal -file.`);
 
@@ -172,23 +189,37 @@ function getEnvDatabaseConfig () {
             env_config_file = dotenv.config({
                 'path' : './' + synclocalfile
             });
-
-            synclocal_used = true;
-        } else {
-            env_config_file = dotenv.config();
         }
 
+        if(env_config_file.parsed.DB_USER == undefined || env_config_file.parsed.DB_HOST == undefined || env_config_file.parsed.DB_NAME == undefined) {
+            let sync_file_used = ".env";
 
-        if(env_config_file.parsed.DB_USER == undefined || env_config_file.parsed.DB_HOST == undefined || env_config_file.parsed.DB_PASSWORD == undefined) {
-            let file_used = '.env';
+            if(synclocal_used) {
+                sync_file_used = ".synclocal";
+            }
 
-            if(synclocal_used)
-                file_used = synclocalfile;
-
-            return cli.error(`Oh no! "${file_used}" -file doesn't have required fields (DB_USER, DB_PASSWORD, DB_HOST)!`);
+            return cli.error(`Your ${sync_file_used} -file doesn't have the required fields (DB_USER, DB_HOST, DB_NAME).`);
         }
 
         return yield Promise.resolve(env_config_file);
+    });
+}
+
+function dbCheck (host, user, pass, database) {
+    return co(function * () {
+        let mysql_auth = `-u${user} -h${host}`;
+
+        if(pass) {
+            mysql_auth += ` -p${pass}`;
+        }
+
+        shell.exec(`mysql ${mysql_auth} -e 'use ${database}'`, {silent : true});
+
+        if(shell.error()) {
+            return yield Promise.resolve(false);
+        }
+
+        return yield Promise.resolve(true);
     });
 }
 
@@ -457,5 +488,6 @@ module.exports = {
     getCommandsByName : getCommandsByName,
     runCommands : runCommands,
     generateDumpFilename : generateDumpFilename,
-    checkVersion : checkVersion
+    checkVersion : checkVersion,
+    dbCheck : dbCheck
 }
