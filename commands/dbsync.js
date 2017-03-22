@@ -86,10 +86,10 @@ function * run (context, h) {
 
     let random_string_config = {length : 25, charset : 'abcdefghijklmnopqrstuvwxyz'};
 
-    tmp_mysql_db.user   = env_config_file.parsed.DB_USER;
-    tmp_mysql_db.pass   = env_config_file.parsed.DB_PASSWORD;
-    tmp_mysql_db.host   = env_config_file.parsed.DB_HOST;
-    tmp_mysql_db.db     = "heroku_temp_" + randomstring.generate(random_string_config) + randomstring.generate(random_string_config);
+    tmp_mysql_db.user       = env_config_file.parsed.DB_USER;
+    tmp_mysql_db.password   = env_config_file.parsed.DB_PASSWORD;
+    tmp_mysql_db.host       = env_config_file.parsed.DB_HOST;
+    tmp_mysql_db.db         = "heroku_temp_" + randomstring.generate(random_string_config) + randomstring.generate(random_string_config);
 
     let setup_config = false;
 
@@ -203,8 +203,8 @@ function * run (context, h) {
 
     let mysql_command_auth = `-u${tmp_mysql_db.user} -h${tmp_mysql_db.host} `;
 
-    if(tmp_mysql_db.pass.length) {
-        mysql_command_auth += `-p${tmp_mysql_db.pass}`;
+    if(tmp_mysql_db.password.length) {
+        mysql_command_auth += `-p${tmp_mysql_db.password}`;
     }
 
     cmd.log(`Creating a temporary database (${tmp_mysql_db.db}).`);
@@ -246,8 +246,8 @@ function * run (context, h) {
                     let current_replace_from = rfroms[rf];
                     let replace_exec_command = `php ${path.resolve(__dirname, "../")}/sar.php --user ${tmp_mysql_db.user} `;
 
-                    if(tmp_mysql_db.pass) {
-                        replace_exec_command += `--pass ${tmp_mysql_db.pass} `;
+                    if(tmp_mysql_db.password) {
+                        replace_exec_command += `--pass ${tmp_mysql_db.password} `;
                     }
 
                     replace_exec_command += `--host ${tmp_mysql_db.host} --db ${tmp_mysql_db.db} --search "${current_replace_from}" --replace "${replace_to}"`;
