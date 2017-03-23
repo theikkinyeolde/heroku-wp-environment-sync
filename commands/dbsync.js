@@ -14,16 +14,13 @@ const library         = require('../library/library.js');
 const colorEnv        = library.colorEnv;
 
 var sync_config = {};
-var heroku = {};
 var silent = true;
 var run_scripts = true;
 var tmp_mysql_db = {};
 
 var cmd = library.cmd;
 
-function * run (context, h) {
-    heroku = h;
-
+function * run (context, heroku) {
     yield library.checkVersion();
 
     let sync_config = library.getSyncFile();
@@ -192,7 +189,7 @@ function * run (context, h) {
     if(run_scripts)
         library.runCommandsByName("before_fetch", from);
 
-    shell.exec(`mysqldump -u${from.db.user} -p${from.db.password} -h${from.db.host} ${from.db.database} ${additional_mysqldump_parameters} > ${tmpfile.name}`, {silent : silent});
+    shell.exec(`mysqldump ${library.createMysqlAuthParameters(from.db.host, from.db.user, from.db.password)} ${from.db.database} ${additional_mysqldump_parameters} > ${tmpfile.name}`, {silent : silent});
 
     if(run_scripts)
         library.runCommandsByName("after_fetch", from);
@@ -201,19 +198,11 @@ function * run (context, h) {
         shell.exec(`cp ${tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${from.name}.sql`, {silent : silent});
     }
 
-    let mysql_command_auth = `-u${tmp_mysql_db.user} -h${tmp_mysql_db.host} `;
-
-    if(tmp_mysql_db.password.length) {
-        mysql_command_auth += `-p${tmp_mysql_db.password}`;
-    }
-
     cmd.log(`Creating a temporary database (${tmp_mysql_db.db}).`);
 
-    shell.exec(`mysqladmin ${mysql_command_auth} create ${tmp_mysql_db.db}`, {silent : silent});
+    let tmp_mysql_auth = library.createMysqlAuthParameters(tmp_mysql_db.host, tmp_mysql_db.user, tmp_mysql_db.password);
 
-    if(shell.error()) {
-        return cli.error(`Error connecting to mysql server in host ${cli.color.magenta(tmp_mysql_db.host)}.`);
-    }
+    shell.exec(`mysqladmin ${tmp_mysql_auth} create ${tmp_mysql_db.db}`, {silent : silent});
 
     process.on('SIGINT', function() {});
 
@@ -224,7 +213,7 @@ function * run (context, h) {
         if(run_scripts)
             library.runCommandsByName("before_sync", tos[t]);
 
-        shell.exec(`mysql ${mysql_command_auth} ${tmp_mysql_db.db} < ${tmpfile.name}`, {silent : silent});
+        shell.exec(`mysql ${tmp_mysql_auth} ${tmp_mysql_db.db} < ${tmpfile.name}`, {silent : silent});
 
         let to_config = tos[t];
         let to_tmpfile = tmp.fileSync();
@@ -265,16 +254,13 @@ function * run (context, h) {
 
         cmd.log(`Pushing the mysql database to ${colorEnv(to_config.name, to_config.app)}.`);
 
-        shell.exec(`mysqldump ${mysql_command_auth} ${tmp_mysql_db.db} ${additional_mysqldump_parameters} > ${to_tmpfile.name}`, {silent : silent});
+        shell.exec(`mysqldump ${tmp_mysql_auth} ${tmp_mysql_db.db} ${additional_mysqldump_parameters} > ${to_tmpfile.name}`, {silent : silent});
 
         if(context.flags['store-dumps']) {
             shell.exec(`cp ${to_tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${tos[t].name}.sql`, {silent : silent});
         }
 
-        let to_mysql_auth = `-u${tos[t].db.user} -h${tos[t].db.host} `;
-
-        if(tos[t].db.password)
-            to_mysql_auth += `-p${tos[t].db.password}`;
+        let to_mysql_auth = library.createMysqlAuthParameters(tos[t].db.host, tos[t].db.user, tos[t].db.password);
 
         if(tos[t].backup_before_sync) {
             let location;
@@ -303,7 +289,7 @@ function * run (context, h) {
 
     cmd.log(`Deleting the temporary database.`);
 
-    shell.exec(`mysql ${mysql_command_auth} -e "drop database ${tmp_mysql_db.db};"`, {silent : silent});
+    shell.exec(`mysql ${tmp_mysql_auth} -e "drop database ${tmp_mysql_db.db};"`, {silent : silent});
 
     cmd.log();
     cmd.header(`It is done.`);
@@ -323,10 +309,14 @@ function * run (context, h) {
     }
 
     if(context.flags['open-browser']) {
-        cli.open(from.url);
+        if(from.url) {
+            cli.open(from.url);
+        }
 
         for(let t in tos) {
-            cli.open(tos[t].url);
+            if(tos[t].url) {
+                cli.open(tos[t].url);
+            }
         }
     }
 }

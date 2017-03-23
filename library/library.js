@@ -39,6 +39,20 @@ function checkVersion () {
     });
 }
 
+function createMysqlAuthParameters (host, user, pass, database) {
+    let output = `-h${host} -u${user}`;
+
+    if(pass) {
+        output += ` -p${pass}`;
+    }
+
+    if(database) {
+        output += ` ${database}`;
+    }
+
+    return output;
+}
+
 function colorEnv (env, app) {
     if(!app)
         return `${cli.color.yellow(env)}`;
@@ -80,8 +94,6 @@ function getEnvironmentObject (env, sync_to, heroku, sync_config) {
 
             heroku_config_vars = yield heroku.get(`/apps/${config.app}/config-vars`);
             heroku_config = yield heroku.get(`/apps/${config.app}`);
-
-            output_object.url = heroku_config.web_url;
 
             output_object.db = dburl(getDatabaseUrlFromConfig(env, heroku_config_vars, sync_config));
 
@@ -127,6 +139,10 @@ function getEnvironmentObject (env, sync_to, heroku, sync_config) {
 
         if(config.scripts != undefined) {
             output_object.scripts = config.scripts;
+        }
+
+        if(config.url != undefined) {
+            output_object.url = config.url;
         }
 
         if(config.backup_before_sync) {
@@ -489,5 +505,6 @@ module.exports = {
     runCommands : runCommands,
     generateDumpFilename : generateDumpFilename,
     checkVersion : checkVersion,
-    dbCheck : dbCheck
+    dbCheck : dbCheck,
+    createMysqlAuthParameters : createMysqlAuthParameters
 }
