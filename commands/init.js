@@ -9,8 +9,6 @@ const library     = require('../library/library.js');
 const valid_database_envs   = library.validDatabaseEnvs;
 
 function * run (context, heroku) {
-    yield library.checkVersion();
-
     if(fs.existsSync(library.defaultSyncFilename + '.json') || fs.existsSync(library.defaultSyncFilename + '.js')) {
         return cli.error(`Syncfile already exists.`);
     }
@@ -119,10 +117,9 @@ function * run (context, heroku) {
 
     replaces.push({
                     "from" : [
-                        esc_regex(produrl)
+                        produrl
                     ],
-                    "to" : localurl,
-                    "regex" : true
+                    "to" : localurl
                 });
 
     var syncfile_template = {
@@ -140,12 +137,14 @@ function * run (context, heroku) {
             {
                 "name" : "production",
                 "app" : prod_app,
-                "db_env" : current_database_env
+                "db_env" : current_database_env,
+                "url" : "https://" + produrl
             },
             {
                 "name" : "localhost",
                 "mutable" : true,
                 "replaces" : replaces,
+                "url" : "http://" + localurl,
                 "scripts" : {
                     "before_sync" : [
                     ],

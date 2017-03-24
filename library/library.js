@@ -8,35 +8,33 @@ const path          = require('path');
 const request       = require('co-request');
 const dateformat    = require('dateformat');
 const shell         = require('shelljs');
+const randomstring  = require('randomstring');
 
 const syncfilename              = 'syncfile';
 const synclocalfile             = '.synclocal';
 const needed_sync_file_version  = '0.2.3'
 const valid_database_envs       = ['JAWSDB_URL', 'CLEARDB_DATABASE_URL'];
 
-function checkVersion () {
+function getTemporaryDatabaseInfo () {
     return co(function * () {
-        try {
-            let data = yield request({
-                url : 'http://registry.npmjs.org/heroku-wp-environment-sync',
-                json : true
-            });
+        let env_config_file = yield getEnvDatabaseConfig();
 
-            if(Object.keys(data.body).length == 0)
-                return;
-
-            let package_data = require(path.resolve(__dirname + '/../package.json'));
-
-            let remote_version = data.body['dist-tags'].latest;
-            let local_version = package_data.version;
-
-            if(semver.gt(remote_version, local_version)) {
-                cli.warn(`There is an update (${cli.color.cyan(remote_version)}) to this plugin. Update it using the heroku update -command.`);
-            }
-        } catch (error) {
-
+        if(!env_config_file) {
+            return env_config_file;
         }
+
+        let random_string_config = {length : 25, charset : 'abcdefghijklmnopqrstuvwxyz'};
+
+        let tmp_mysql_db = {
+            user : env_config_file.parsed.DB_USER,
+            password : env_config_file.parsed.DB_PASSWORD,
+            host : env_config_file.parsed.DB_HOST,
+            database : "heroku_temp_" + randomstring.generate(random_string_config) + randomstring.generate(random_string_config)
+        };
+
+        return tmp_mysql_db;
     });
+
 }
 
 function createMysqlAuthParameters (host, user, pass, database) {
@@ -457,7 +455,7 @@ function runCommandsByName (name, env_config) {
     return false;
 }
 
-function generateDumpFilename (output, prefix, createdir) {
+function createDumpFilename (output, prefix, createdir) {
     let directory = './';
 
     let filename = prefix + dateformat(new Date(), "dd_mm_yyyy_HH_MM") + `.sql`;
@@ -486,6 +484,22 @@ function generateDumpFilename (output, prefix, createdir) {
     return location;
 }
 
+function createSearchAndReplaceCommand (search, replace, dboptions, options) {
+    let replace_exec_command = `php ${path.resolve(__dirname, "../")}/sar.php --user ${dboptions.user} `;
+
+    if(dboptions.password != undefined && dboptions.password.length > 0) {
+        replace_exec_command += `--pass ${dboptions.password} `;
+    }
+
+    replace_exec_command += `--host ${dboptions.host} --db ${dboptions.database} --search "${search}" --replace "${replace}"`;
+
+    if(options.regexp != undefined && options.regexp) {
+        replace_exec_command += ` --regexp`;
+    }
+
+    return replace_exec_command;
+}
+
 module.exports = {
     getDatabaseUrlFromConfig : getDatabaseUrlFromConfig,
     getEnvironmentConfig : getEnvironmentConfig,
@@ -503,8 +517,9 @@ module.exports = {
     runCommandsByName : runCommandsByName,
     getCommandsByName : getCommandsByName,
     runCommands : runCommands,
-    generateDumpFilename : generateDumpFilename,
-    checkVersion : checkVersion,
+    createDumpFilename : createDumpFilename,
     dbCheck : dbCheck,
-    createMysqlAuthParameters : createMysqlAuthParameters
+    createMysqlAuthParameters : createMysqlAuthParameters,
+    getTemporaryDatabaseInfo : getTemporaryDatabaseInfo,
+    createSearchAndReplaceCommand : createSearchAndReplaceCommand
 }

@@ -13,8 +13,6 @@ var silent = true;
 var cmd = library.cmd;
 
 function * run (context, heroku) {
-    yield library.checkVersion();
-
     if(context.flags['show-command-outputs']) {
         silent = false;
     }
@@ -78,7 +76,7 @@ function * run (context, heroku) {
     if(!library.validateDatabaseObject(database))
         return;
 
-    let location = library.generateDumpFilename(context.flags.output, filename_prefix, true);
+    let location = library.createDumpFilename(context.flags.output, filename_prefix, true);
 
     cmd.noLog("Dumping database.");
 
@@ -104,12 +102,9 @@ function * run (context, heroku) {
         additional_mysqldump_parameters = "--single-transaction --quick";
     }
 
-    let dump_cmd = `mysqldump -u${database.user} -h${database.host}`
+    let mysql_auth_params = library.createMysqlAuthParameters(database.host, database.user, database.password, database.database);
 
-    if(database.password)
-        dump_cmd += ` -p${database.password}`;
-
-    dump_cmd += ` ${database.database} ${additional_mysqldump_parameters} > ${location}`;
+    let dump_cmd = `mysqldump ${mysql_auth_params} ${additional_mysqldump_parameters} > ${location}`;
 
     shell.exec(dump_cmd, {silent : silent});
 

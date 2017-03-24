@@ -21,8 +21,6 @@ var tmp_mysql_db = {};
 var cmd = library.cmd;
 
 function * run (context, heroku) {
-    yield library.checkVersion();
-
     let sync_config = library.getSyncFile();
 
     if(!sync_config) {
@@ -51,12 +49,6 @@ function * run (context, heroku) {
         use_to_from = true;
     }
 
-    let env_config_file = yield library.getEnvDatabaseConfig();
-
-    if(!env_config_file) {
-        return env_config_file;
-    }
-
     if(sync_config.environments == undefined || !sync_config.environments.length) {
         return cli.error(`No environments defined, exiting.`);
     }
@@ -81,12 +73,11 @@ function * run (context, heroku) {
         }
     }
 
-    let random_string_config = {length : 25, charset : 'abcdefghijklmnopqrstuvwxyz'};
+    let tmp_mysql_db = yield library.getTemporaryDatabaseInfo();
 
-    tmp_mysql_db.user       = env_config_file.parsed.DB_USER;
-    tmp_mysql_db.password   = env_config_file.parsed.DB_PASSWORD;
-    tmp_mysql_db.host       = env_config_file.parsed.DB_HOST;
-    tmp_mysql_db.db         = "heroku_temp_" + randomstring.generate(random_string_config) + randomstring.generate(random_string_config);
+    if(!tmp_mysql_db) {
+        return tmp_mysql_db;
+    }
 
     let setup_config = false;
 
@@ -135,7 +126,7 @@ function * run (context, heroku) {
             if(envconf)
                 tos.push(envconf);
         }
-    } else  if(typeof setup_config.to == 'string') {
+    } else if(typeof setup_config.to == 'string') {
         let envconf = yield library.getEnvironmentObject(setup_config.to, !context.flags["no-mutable-checks"], heroku, sync_config);
 
         if(envconf)
@@ -198,11 +189,11 @@ function * run (context, heroku) {
         shell.exec(`cp ${tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${from.name}.sql`, {silent : silent});
     }
 
-    cmd.log(`Creating a temporary database (${tmp_mysql_db.db}).`);
+    cmd.log(`Creating a temporary database (${tmp_mysql_db.database}).`);
 
     let tmp_mysql_auth = library.createMysqlAuthParameters(tmp_mysql_db.host, tmp_mysql_db.user, tmp_mysql_db.password);
 
-    shell.exec(`mysqladmin ${tmp_mysql_auth} create ${tmp_mysql_db.db}`, {silent : silent});
+    shell.exec(`mysqladmin ${tmp_mysql_auth} create ${tmp_mysql_db.database}`, {silent : silent});
 
     process.on('SIGINT', function() {});
 
@@ -213,7 +204,7 @@ function * run (context, heroku) {
         if(run_scripts)
             library.runCommandsByName("before_sync", tos[t]);
 
-        shell.exec(`mysql ${tmp_mysql_auth} ${tmp_mysql_db.db} < ${tmpfile.name}`, {silent : silent});
+        shell.exec(`mysql ${tmp_mysql_auth} ${tmp_mysql_db.database} < ${tmpfile.name}`, {silent : silent});
 
         let to_config = tos[t];
         let to_tmpfile = tmp.fileSync();
@@ -233,17 +224,8 @@ function * run (context, heroku) {
 
                 for(let rf in rfroms) {
                     let current_replace_from = rfroms[rf];
-                    let replace_exec_command = `php ${path.resolve(__dirname, "../")}/sar.php --user ${tmp_mysql_db.user} `;
 
-                    if(tmp_mysql_db.password) {
-                        replace_exec_command += `--pass ${tmp_mysql_db.password} `;
-                    }
-
-                    replace_exec_command += `--host ${tmp_mysql_db.host} --db ${tmp_mysql_db.db} --search "${current_replace_from}" --replace "${replace_to}"`;
-
-                    if(replace_regexp) {
-                        replace_exec_command += ` --regexp`;
-                    }
+                    let replace_exec_command = library.createSearchAndReplaceCommand(current_replace_from, replace_to, tmp_mysql_db, {regexp : replace_regexp});
 
                     let replace_return = shell.exec(replace_exec_command, {silent : silent});
 
@@ -254,7 +236,7 @@ function * run (context, heroku) {
 
         cmd.log(`Pushing the mysql database to ${colorEnv(to_config.name, to_config.app)}.`);
 
-        shell.exec(`mysqldump ${tmp_mysql_auth} ${tmp_mysql_db.db} ${additional_mysqldump_parameters} > ${to_tmpfile.name}`, {silent : silent});
+        shell.exec(`mysqldump ${tmp_mysql_auth} ${tmp_mysql_db.database} ${additional_mysqldump_parameters} > ${to_tmpfile.name}`, {silent : silent});
 
         if(context.flags['store-dumps']) {
             shell.exec(`cp ${to_tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${tos[t].name}.sql`, {silent : silent});
@@ -266,9 +248,9 @@ function * run (context, heroku) {
             let location;
 
             if(to_config.backup_before_sync === true) {
-                location = library.generateDumpFilename(false, `heroku_wp_${tos[t].name}_`, true);
+                location = library.createDumpFilename(false, `heroku_wp_${tos[t].name}_`, true);
             } else if(typeof(to_config.backup_before_sync) == 'string') {
-                location = library.generateDumpFilename(to_config.backup_before_sync, `heroku_wp_${tos[t].name}_`, true);
+                location = library.createDumpFilename(to_config.backup_before_sync, `heroku_wp_${tos[t].name}_`, true);
             }
 
             shell.exec(`mysqldump ${to_mysql_auth} ${tos[t].db.database} > ${location}`, {silent : silent});
@@ -284,12 +266,11 @@ function * run (context, heroku) {
 
             shell.exec(`redis-cli -h ${tos[t].redis.host} -p ${tos[t].redis.port} -a ${tos[t].redis.password} flushall`, {silent : silent});
         }
-
     }
 
     cmd.log(`Deleting the temporary database.`);
 
-    shell.exec(`mysql ${tmp_mysql_auth} -e "drop database ${tmp_mysql_db.db};"`, {silent : silent});
+    shell.exec(`mysql ${tmp_mysql_auth} -e "drop database ${tmp_mysql_db.database};"`, {silent : silent});
 
     cmd.log();
     cmd.header(`It is done.`);
@@ -393,7 +374,7 @@ module.exports = {
         },
         {
             name : "open-browser",
-            description : "Open all affected locations in browser after sync.",
+            description : "Open all affected locations in browser after sync. The \"url\" -parameter must be set in the environment configuration.",
             hasValue : false
         }
     ],
