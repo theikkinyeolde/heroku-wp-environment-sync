@@ -1,3 +1,4 @@
+'use strict'
 const cli           = require('heroku-cli-util');
 const dburl         = require('parse-db-url');
 const fs            = require('fs');
@@ -422,13 +423,13 @@ function runCommands (commands) {
         if(commands.length == 0)
             return;
 
-        shell.exec(commands, {silent : silent});
+        shell.exec(commands, {silent : false});
     } else if (typeof(commands) == 'object') {
         for(let c in commands) {
             if(commands[c].length == 0)
                 continue;
 
-            shell.exec(commands[c], {silent : silent});
+            shell.exec(commands[c], {silent : false});
         }
     }
 }
