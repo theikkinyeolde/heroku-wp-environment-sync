@@ -155,8 +155,8 @@ function recursiveObjectReplace ($object, $search, $replace = "", $regexp = fals
             $output_data[$key] = recursiveObjectReplace($value, $search, $replace, $regexp);
         }
     } else if(is_object($object)) {
-        $object = get_object_vars($object);
         $output_data = $object;
+        $object = get_object_vars($object);
         foreach($object as $key => $value) {
             $output_data->$key = recursiveObjectReplace($value, $search, $replace, $regexp);
         }
