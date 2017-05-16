@@ -162,7 +162,7 @@ function * run (context, heroku) {
         ]
     };
 
-    fs.writeFile(`${path.resolve('./')}/${library.defaultSyncFilename + '.json'}`, JSON.stringify(syncfile_template, null, 4));
+    fs.writeFileSync(`${path.resolve('./')}/${library.defaultSyncFilename + '.json'}`, JSON.stringify(syncfile_template, null, 4));
 
     cli.styledHeader("Syncfile initialized.");
 }
