@@ -120,7 +120,7 @@ heroku help sync:dbsync
 Also for troubleshooting consider using the ```--verbose``` and ```--more-verbose``` -flags.
 
 ## Changelog
-### 0.2.9 / 
+### 0.2.9 / 8.8.2017
 * Made changes to the library structure and refactored a bunch of stuff for the future.
 * Made error reporting more useful and added verbose mode and more-verbose mode for debugging uses.
 * Removed "show-command-outputs" -flag, because of the verbose additions.

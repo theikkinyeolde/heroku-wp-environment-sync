@@ -485,7 +485,7 @@ var lib = {
             return yield Promise.resolve(true);
         }
 
-        msg = msg + " (yes)";
+        msg = msg + " (y/n)";
 
         this.setupAReminder();
 

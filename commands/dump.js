@@ -8,8 +8,6 @@ const shell         = require('shelljs');
 const library       = require('../library/library.js');
 const colorEnv      = library.colorEnv;
 
-var silent = true;
-
 var cmd = library.cmd;
 
 function * run (context, heroku) {
