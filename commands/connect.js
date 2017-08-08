@@ -5,16 +5,19 @@ const dateformat    = require('dateformat');
 const path          = require('path');
 const fs            = require('fs');
 const shell         = require('shelljs');
-const spawn         = require('child_process').spawn;
+const spawn         = require('child_process').spawnSync;
 
 const library       = require('../library/library.js');
 const colorEnv      = library.colorEnv;
 
-var silent = true;
-
-var cmd = library.cmd;
-
 function * run (context, heroku) {
+    library.init({
+        show_messages : !context.flags.hide,
+        force : context.flags.force,
+        verbose : context.flags.verbose,
+        heroku : heroku
+    });
+
     let connect_to = "";
 
     if(context.flags['app']) {
@@ -26,7 +29,7 @@ function * run (context, heroku) {
         let db_env = yield cli.prompt(`What is the env variable of the database url in the app ${cli.color.app(app)}?`);
 
         if(!heroku_config_vars[db_env]) {
-            return cli.error(`No database env variable found with ${cli.color.red(db_env)}.`);
+            return library.error(`No database env variable found with ${cli.color.red(db_env)}.`);
         }
 
         database = dburl(heroku_config_vars[db_env]);
@@ -44,7 +47,7 @@ function * run (context, heroku) {
         if(!env)
             return cli.error(`No environment parameter given.`);
 
-        environment_config = yield library.getEnvironmentObject(env, false, heroku, sync_config);
+        environment_config = yield library.getEnvironmentObject(env, false, sync_config);
 
         if(!environment_config)
             return environment_config;
@@ -56,8 +59,8 @@ function * run (context, heroku) {
         database = environment_config.db;
     }
 
-    cmd.log();
-    cmd.header(`Connecting to ${connect_to}.`);
+    library.log();
+    library.header(`Connecting to ${connect_to}.`);
 
     let parameters = [];
 
@@ -70,7 +73,6 @@ function * run (context, heroku) {
 
     var mysql = spawn('mysql', parameters, {stdio : 'inherit'});
 }
-
 
 module.exports = {
     topic : 'sync',

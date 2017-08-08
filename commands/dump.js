@@ -13,15 +13,15 @@ var silent = true;
 var cmd = library.cmd;
 
 function * run (context, heroku) {
-    if(context.flags['show-command-outputs']) {
-        silent = false;
-    }
-
-    cmd.setShow(!context.flags.hide);
-    cmd.setForce(context.flags.force);
+    library.init({
+        show_messages : !context.flags.hide,
+        force : context.flags.force,
+        verbose : (context.flags.verbose || context.flags['more-verbose']),
+        heroku : heroku,
+        more_verbose : context.flags['more-verbose']
+    });
 
     let env, app, environment_config, database, filename_prefix, source;
-
     if(context.flags['mysql-url']) {
         database = dburl(context.flags['mysql-url']);
         filename_prefix = `${database.database}_`;
@@ -33,10 +33,10 @@ function * run (context, heroku) {
         let heroku_config_vars = yield heroku.get(`/apps/${app}/config-vars`);
         let heroku_config = yield heroku.get(`/apps/${app}`);
 
-        let db_env = yield cli.prompt(`What is the env variable of the database url in the app ${cli.color.app(app)}?`);
+        let db_env = yield library.prompt(`What is the env variable of the database url in the app ${cli.color.app(app)}?`);
 
         if(!heroku_config_vars[db_env]) {
-            return cli.error(`No database env variable found with ${cli.color.red(db_env)}.`);
+            return library.error(`No database env variable found with ${cli.color.red(db_env)}.`);
         }
 
         database = dburl(heroku_config_vars[db_env]);
@@ -54,9 +54,9 @@ function * run (context, heroku) {
         env = context.args.environment;
 
         if(!env)
-            return cli.error(`No environment parameter given.`);
+            return library.error(`No environment parameter given.`);
 
-        environment_config = yield library.getEnvironmentObject(env, false, heroku, sync_config);
+        environment_config = yield library.getEnvironmentObject(env, false, sync_config);
 
         if(!environment_config)
             return environment_config;
@@ -78,23 +78,23 @@ function * run (context, heroku) {
 
     let location = library.createDumpFilename(context.flags.output, filename_prefix, true);
 
-    cmd.noLog("Dumping database.");
+    library.noLog("Dumping database.");
 
-    cmd.log();
-    cmd.header("Hello! Let's dump some databases, shall we?");
-    cmd.log(`I will take the mysql dump from ${source}.`);
-    cmd.log(`Then I will save it to this location:`);
-    cmd.log(`${cli.color.magenta(location)}`);
+    library.log();
+    library.header("Hello! Let's dump some databases, shall we?");
+    library.log(`I will take the mysql dump from ${source}.`);
+    library.log(`Then I will save it to this location:`);
+    library.log(`${cli.color.magenta(location)}`);
 
-    if(yield cmd.confirmPrompt('Are you ok with this?')) {
-        cmd.log(`Ok, let's start this show!`);
+    if(yield library.confirmPrompt('Are you ok with this?')) {
+        library.log(`Ok, let's start this show!`);
     } else {
-        cmd.log(`Okay, but you'll be back!`);
+        library.log(`Okay, but you'll be back!`);
         return;
     }
 
-    cmd.log();
-    cmd.header(`Getting the ${source} database.`);
+    library.log();
+    library.header(`Getting the ${source} database.`);
 
     let additional_mysqldump_parameters = "";
 
@@ -106,13 +106,12 @@ function * run (context, heroku) {
 
     let dump_cmd = `mysqldump ${mysql_auth_params} ${additional_mysqldump_parameters} > ${location}`;
 
-    shell.exec(dump_cmd, {silent : silent});
+    library.shellExec(dump_cmd);
 
-    cmd.log();
-    cmd.header(`It is done now. Bye bye!`);
+    library.log();
+    library.header(`It is done now. Bye bye!`);
 
-    cmd.noLog("Done.");
-
+    library.noLog("Done.");
 }
 
 module.exports = {
@@ -164,10 +163,12 @@ module.exports = {
             hasValue : false
         },
         {
-            name : "show-command-outputs",
-            char : "c",
-            description : "Show command outputs.",
-            hasValue : false
+            name : "verbose",
+            description : "More verbose output. For troubleshooting."
+        },
+        {
+            name : "more-verbose",
+            description : "Even more verbose output (commands outputs are shown). For troubleshooting."
         }
     ],
     run : cli.command(co.wrap(run))

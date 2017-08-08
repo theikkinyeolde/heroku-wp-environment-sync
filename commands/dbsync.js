@@ -14,13 +14,21 @@ const library         = require('../library/library.js');
 const colorEnv        = library.colorEnv;
 
 var sync_config = {};
-var silent = true;
 var run_scripts = true;
 var tmp_mysql_db = {};
 
-var cmd = library.cmd;
-
 function * run (context, heroku) {
+
+    library.notify("Starting database sync.", true);
+
+    library.init({
+        show_messages : !context.flags.hide,
+        force : context.flags.force,
+        verbose : (context.flags.verbose || context.flags['more-verbose']),
+        heroku : heroku,
+        more_verbose : context.flags['more-verbose']
+    });
+
     let sync_config = library.getSyncFile();
 
     if(!sync_config) {
@@ -31,45 +39,38 @@ function * run (context, heroku) {
         run_scripts = false;
     }
 
-    if(context.flags['show-command-outputs']) {
-        silent = false;
-    }
-
-    cmd.setShow(!context.flags.hide);
-    cmd.setForce(context.flags.force);
-
     var setup = context.args.setup;
 
     let use_to_from = false;
     if(context.flags.from != undefined || context.flags.to != undefined) {
         if(context.flags.from == undefined || context.flags.to == undefined) {
-            return cli.error(`If you are using the --from and --to parameters, you need to specify both.`);
+            return library.error(`If you are using the --from and --to parameters, you need to specify both.`);
         }
 
         use_to_from = true;
     }
 
     if(sync_config.environments == undefined || !sync_config.environments.length) {
-        return cli.error(`No environments defined, exiting.`);
+        return library.error(`No environments defined, exiting.`);
     }
 
     if(!use_to_from) {
         if(sync_config.setups == undefined || !sync_config.setups.length) {
-            return cli.error(`No setups defined, exiting.`);
+            return library.error(`No setups defined, exiting.`);
         }
 
         if(setup == undefined) {
-            cmd.warn("No setup specified, using the default one.");
+            library.warn("No setup specified, using the default one.");
 
             setup = sync_config.defaultsetup;
 
             if(setup == undefined || !setup.length) {
-                return cli.error(`No default setup specified and no setup argument given, exiting.`);
+                return library.error(`No default setup specified and no setup argument given, exiting.`);
             }
         }
 
         if(setup == undefined || !setup.length) {
-            return cli.error("No setup specified, exiting.");
+            return library.error("No setup specified, exiting.");
         }
     }
 
@@ -97,44 +98,44 @@ function * run (context, heroku) {
     }
 
     if(!setup_config) {
-        return cli.error(`Could not find setup configuration with setup ${setup}.`);
+        return library.error(`Could not find setup configuration with setup ${setup}.`);
     }
 
     if(context.flags["no-mutable-checks"]) {
-        cmd.log();
-        cmd.header("Ignoring mutable checks!");
-        cmd.log("You are ignoring mutable checks! This is not advised.");
-        cmd.log("I hope you know what you are doing.");
+        library.log();
+        library.header("Ignoring mutable checks!");
+        library.log("You are ignoring mutable checks! This is not advised.");
+        library.log("I hope you know what you are doing.");
 
-        if(!(yield cmd.confirmPrompt("Continue?"))) {
-            cmd.log("Quitting!");
+        if(!(yield library.confirmPrompt("Continue?"))) {
+            library.log("Quitting!");
             return;
         }
     }
 
-    var from = yield library.getEnvironmentObject(setup_config.from, false, heroku, sync_config);
+    var from = yield library.getEnvironmentObject(setup_config.from, false, sync_config);
     var tos = [];
 
     if(!from) {
-        return cli.error(`Could not get environment configuration.`);
+        return library.error(`Could not get environment configuration.`);
     }
 
     if(typeof setup_config.to == 'object') {
         for(let t in setup_config.to) {
-            let envconf = yield library.getEnvironmentObject(setup_config.to[t], !context.flags["no-mutable-checks"], heroku, sync_config);
+            let envconf = yield library.getEnvironmentObject(setup_config.to[t], !context.flags["no-mutable-checks"], sync_config);
 
             if(envconf)
                 tos.push(envconf);
         }
     } else if(typeof setup_config.to == 'string') {
-        let envconf = yield library.getEnvironmentObject(setup_config.to, !context.flags["no-mutable-checks"], heroku, sync_config);
+        let envconf = yield library.getEnvironmentObject(setup_config.to, !context.flags["no-mutable-checks"], sync_config);
 
         if(envconf)
             tos.push(envconf);
     }
 
     if(!tos.length) {
-        return cli.error(`Error in the configuration of the destination of the sync.`);
+        return library.error(`Error in the configuration of the destination of the sync.`);
     }
 
     let envs_string = "";
@@ -145,27 +146,27 @@ function * run (context, heroku) {
         envs_string += `${cli.color.yellow(tos[t].name)}`;
     }
 
-    cmd.noLog(`Syncing from ${colorEnv(from.name, from.app)} to ${envs_string}.`);
+    library.noLog(`Syncing from ${colorEnv(from.name, from.app)} to ${envs_string}.`);
 
-    cmd.log();
-    cmd.header("Let's talk.");
-    cmd.log(`This is what i'm going to do.`);
-    cmd.log(`From ${colorEnv(from.name, from.app)} i'm going to get the database.`);
-    cmd.log(`I'm going to put that database after search and replace to these places:`);
+    library.log();
+    library.header("Let's talk.");
+    library.log(`This is what i'm going to do.`);
+    library.log(`From ${colorEnv(from.name, from.app)} i'm going to get the database.`);
+    library.log(`I'm going to put that database after search and replace to these places:`);
 
     for(let t in tos) {
-        cmd.log(`- ${colorEnv(tos[t].name, tos[t].app)}`);
+        library.log(`- ${colorEnv(tos[t].name, tos[t].app)}`);
     }
 
-    if(yield cmd.confirmPrompt(`Are you ok with this?`)) {
-        cmd.log(`Ok! Let's do this!`);
+    if(yield library.confirmPrompt(`Are you ok with this?`)) {
+        library.log(`Ok! Let's do this!`);
     } else {
-        cmd.log(`No sweat! Some other time then!`);
+        library.log(`No sweat! Some other time then!`);
         return;
     }
 
-    cmd.log();
-    cmd.header(`Getting the database from ${cli.color.yellow(from.name)}`);
+    library.log();
+    library.header(`Getting the database from ${cli.color.yellow(from.name)}`);
 
     var tmpfile = tmp.fileSync();
 
@@ -175,36 +176,36 @@ function * run (context, heroku) {
         additional_mysqldump_parameters = "--single-transaction --quick";
     }
 
-    cmd.log(`Getting the database from ${colorEnv(from.name, from.app)}`);
+    library.log(`Getting the database from ${colorEnv(from.name, from.app)}`);
 
     if(run_scripts)
         library.runCommandsByName("before_fetch", from);
 
-    shell.exec(`mysqldump ${library.createMysqlAuthParameters(from.db.host, from.db.user, from.db.password)} ${from.db.database} ${additional_mysqldump_parameters} > ${tmpfile.name}`, {silent : silent});
+    library.shellExec(`mysqldump ${library.createMysqlAuthParameters(from.db.host, from.db.user, from.db.password)} ${from.db.database} ${additional_mysqldump_parameters} > ${tmpfile.name}`);
 
     if(run_scripts)
         library.runCommandsByName("after_fetch", from);
 
     if(context.flags['store-dumps']) {
-        shell.exec(`cp ${tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${from.name}.sql`, {silent : silent});
+        library.shellExec(`cp ${tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${from.name}.sql`);
     }
 
-    cmd.log(`Creating a temporary database (${tmp_mysql_db.database}).`);
+    library.log(`Creating a temporary database (${tmp_mysql_db.database}).`);
 
     let tmp_mysql_auth = library.createMysqlAuthParameters(tmp_mysql_db.host, tmp_mysql_db.user, tmp_mysql_db.password);
 
-    shell.exec(`mysqladmin ${tmp_mysql_auth} create ${tmp_mysql_db.database}`, {silent : silent});
+    let result = library.shellExec(`mysqladmin ${tmp_mysql_auth} create ${tmp_mysql_db.database}`);
 
-    process.on('SIGINT', function() {});
+    yield library.addTempDbToHomeList(tmp_mysql_db.database);
 
     for(let t in tos) {
-        cmd.log();
-        cmd.header(`Syncing ${cli.color.yellow(from.name)}' to '${cli.color.yellow(tos[t].name)}'`);
+        library.log();
+        library.header(`Syncing ${cli.color.yellow(from.name)}' to '${cli.color.yellow(tos[t].name)}'`);
 
         if(run_scripts)
             library.runCommandsByName("before_sync", tos[t]);
 
-        shell.exec(`mysql ${tmp_mysql_auth} ${tmp_mysql_db.database} < ${tmpfile.name}`, {silent : silent});
+        library.shellExec(`mysql ${tmp_mysql_auth} ${tmp_mysql_db.database} < ${tmpfile.name}`);
 
         let to_config = tos[t];
         let to_tmpfile = tmp.fileSync();
@@ -227,19 +228,19 @@ function * run (context, heroku) {
 
                     let replace_exec_command = library.createSearchAndReplaceCommand(current_replace_from, replace_to, tmp_mysql_db, {regexp : replace_regexp});
 
-                    let replace_return = shell.exec(replace_exec_command, {silent : silent});
+                    let replace_return = library.shellExec(replace_exec_command);
 
-                    cmd.log(`Replaced "${cli.color.green(current_replace_from)}" to "${cli.color.green(replace_to)}" with ${cli.color.green(replace_return)} rows replaced.`);
+                    library.log(`Replaced "${cli.color.green(current_replace_from)}" to "${cli.color.green(replace_to)}" with ${cli.color.green(replace_return)} rows replaced.`);
                 }
             }
         }
 
-        cmd.log(`Pushing the mysql database to ${colorEnv(to_config.name, to_config.app)}.`);
+        library.log(`Pushing the mysql database to ${colorEnv(to_config.name, to_config.app)}.`);
 
-        shell.exec(`mysqldump ${tmp_mysql_auth} ${tmp_mysql_db.database} ${additional_mysqldump_parameters} > ${to_tmpfile.name}`, {silent : silent});
+        library.shellExec(`mysqldump ${tmp_mysql_auth} ${tmp_mysql_db.database} ${additional_mysqldump_parameters} > ${to_tmpfile.name}`);
 
         if(context.flags['store-dumps']) {
-            shell.exec(`cp ${to_tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${tos[t].name}.sql`, {silent : silent});
+            library.shellExec(`cp ${to_tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${tos[t].name}.sql`);
         }
 
         let to_mysql_auth = library.createMysqlAuthParameters(tos[t].db.host, tos[t].db.user, tos[t].db.password);
@@ -253,39 +254,39 @@ function * run (context, heroku) {
                 location = library.createDumpFilename(to_config.backup_before_sync, `heroku_wp_${tos[t].name}_`, true);
             }
 
-            shell.exec(`mysqldump ${to_mysql_auth} ${tos[t].db.database} > ${location}`, {silent : silent});
+            library.shellExec(`mysqldump ${to_mysql_auth} ${tos[t].db.database} > ${location}`);
         }
 
-        shell.exec(`mysql ${to_mysql_auth} ${tos[t].db.database} < ${to_tmpfile.name}`, {silent : silent});
+        library.shellExec(`mysql ${to_mysql_auth} ${tos[t].db.database} < ${to_tmpfile.name}`);
 
         if(run_scripts)
             library.runCommandsByName("after_sync", tos[t]);
 
         if(tos[t].redis != undefined) {
-            cmd.log("Redis found. Flushing it.");
+            library.log("Redis found. Flushing it.");
 
-            shell.exec(`redis-cli -h ${tos[t].redis.host} -p ${tos[t].redis.port} -a ${tos[t].redis.password} flushall`, {silent : silent});
+            library.shellExec(`redis-cli -h ${tos[t].redis.host} -p ${tos[t].redis.port} -a ${tos[t].redis.password} flushall`);
         }
     }
 
-    cmd.log(`Deleting the temporary database.`);
+    library.log(`Deleting the temporary databases.`);
 
-    shell.exec(`mysql ${tmp_mysql_auth} -e "drop database ${tmp_mysql_db.database};"`, {silent : silent});
+    yield library.cleanTempDatabases();
 
-    cmd.log();
-    cmd.header(`It is done.`);
-    cmd.log("Now go and make sure all is nice and neat.");
+    library.log();
+    library.header(`It is done.`);
+    library.log("Now go and make sure all is nice and neat.");
 
     if(context.flags.hide) {
         cli.log("Done.");
     }
 
     if(context.flags['store-dumps']) {
-        cmd.log();
-        cmd.header(`Dump store locations`);
-        cmd.log(`The dump for ${from.name} is located in: ${os.tmpdir()}/heroku_wp_environment_sync_${from.name}.sql`);
+        library.log();
+        library.header(`Dump store locations`);
+        library.log(`The dump for ${from.name} is located in: ${os.tmpdir()}/heroku_wp_environment_sync_${from.name}.sql`);
         for(let t in tos) {
-            cmd.log(`The dump for ${tos[t].name} is located in: ${os.tmpdir()}/heroku_wp_environment_sync_${tos[t].name}.sql`);
+            library.log(`The dump for ${tos[t].name} is located in: ${os.tmpdir()}/heroku_wp_environment_sync_${tos[t].name}.sql`);
         }
     }
 
@@ -300,6 +301,7 @@ function * run (context, heroku) {
             }
         }
     }
+
 }
 
 module.exports = {
@@ -362,10 +364,12 @@ module.exports = {
             hasValue : false
         },
         {
-            name : "show-command-outputs",
-            char : "c",
-            description : "Show command outputs.",
-            hasValue : false
+            name : "verbose",
+            description : "More verbose output. For troubleshooting."
+        },
+        {
+            name : "more-verbose",
+            description : "Even more verbose output (commands outputs are shown). For troubleshooting."
         },
         {
             name : 'skip-scripts',

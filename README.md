@@ -2,8 +2,6 @@
 
 A heroku plugin to sync different wordpress environments. Especially to sync databases, ya hear?
 
-[![Build Status](https://travis-ci.org/taneliheikkinen/heroku-wp-environment-sync.svg?branch=master)](https://travis-ci.org/taneliheikkinen/heroku-wp-environment-sync)
-
 ## Requirements
 
 - Heroku cli (https://devcenter.heroku.com/articles/heroku-cli)
@@ -118,3 +116,14 @@ For example:
 ```
 heroku help sync:dbsync
 ```
+
+Also for troubleshooting consider using the ```--verbose``` and ```--more-verbose``` -flags.
+
+## Changelog
+### 0.2.9 / 
+* Made changes to the library structure and refactored a bunch of stuff for the future.
+* Made error reporting more useful and added verbose mode and more-verbose mode for debugging uses.
+* Removed "show-command-outputs" -flag, because of the verbose additions.
+* Added notifications so that if you don't respond to a question in about 1 minute, it will notify you in case you forgot.
+* Added a new feature for cleaning up databases, that creates a home directory (~/.heroku-wp-environment-sync) and a temp database -file in there, that holds the temporary database names for later cleanup. This is useful for example if you exit the process before the cleanup happens, we can clean up the temporary database later.
+* Other bug fixes and changes.
