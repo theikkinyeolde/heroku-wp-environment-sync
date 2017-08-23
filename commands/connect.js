@@ -11,11 +11,13 @@ const library       = require('../library/library.js');
 const colorEnv      = library.colorEnv;
 
 function * run (context, heroku) {
+
     library.init({
         show_messages : !context.flags.hide,
         force : context.flags.force,
-        verbose : context.flags.verbose,
-        heroku : heroku
+        verbose : (context.flags.verbose || context.flags['more-verbose']),
+        heroku : heroku,
+        more_verbose : context.flags['more-verbose']
     });
 
     let connect_to = "";
@@ -59,6 +61,8 @@ function * run (context, heroku) {
         database = environment_config.db;
     }
 
+    library.notify(`Connecting to ${app} -app's database!`);
+
     library.log();
     library.header(`Connecting to ${connect_to}.`);
 
@@ -92,6 +96,14 @@ module.exports = {
             name : "app",
             description : "If you want to connect to an apps database directly.",
             hasValue : true
+        },
+        {
+            name : "verbose",
+            description : "More verbose output. For troubleshooting."
+        },
+        {
+            name : "more-verbose",
+            description : "Even more verbose output (commands outputs are shown). For troubleshooting."
         }
     ],
     run : cli.command(co.wrap(run))

@@ -11,6 +11,8 @@ const colorEnv      = library.colorEnv;
 var cmd = library.cmd;
 
 function * run (context, heroku) {
+    library.notify("Starting dumping process!");
+
     library.init({
         show_messages : !context.flags.hide,
         force : context.flags.force,
@@ -85,7 +87,7 @@ function * run (context, heroku) {
     library.log(`${cli.color.magenta(location)}`);
 
     if(yield library.confirmPrompt('Are you ok with this?')) {
-        library.log(`Ok, let's start this show!`);
+        library.log(`Ok, let's start the show!`);
     } else {
         library.log(`Okay, but you'll be back!`);
         return;
@@ -110,6 +112,10 @@ function * run (context, heroku) {
     library.header(`It is done now. Bye bye!`);
 
     library.noLog("Done.");
+
+    library.notify("Your database dump is ready!", true);
+
+    library.endingMessage();
 }
 
 module.exports = {

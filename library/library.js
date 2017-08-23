@@ -20,8 +20,13 @@ const needed_sync_file_version  = '0.2.3'
 const valid_database_envs       = ['JAWSDB_URL', 'CLEARDB_DATABASE_URL'];
 const home_sync_dir_name        = '.heroku-wp-environment-sync';
 
+
+function random_range (min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 function random_array_element (arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
+    return arr[random_range(0, arr.length - 1)];
 }
 
 var lib = {
@@ -33,6 +38,10 @@ var lib = {
     more_verbose   : false,
 
     heroku          : {},
+
+    //Useful variables
+    default_sync_filename : syncfilename,
+    valid_database_envs : valid_database_envs,
 
     //Internal stuff
     max_command_show_length : 70,
@@ -138,18 +147,26 @@ var lib = {
         if(config.app != undefined && config.app != '') {
             var app_validation_result = yield this.validateApp(config.app);
 
-            if(app_validation_result !== true) {
-                if(app_validation_result.id == "not_found")
+            if(app_validation_result !== true && app_validation_result) {
+                if(app_validation_result.id == "not_found") {
                     return this.error(`Environment ${this.colorEnv(env)} has an app that seems to not exist.`);
-                if(app_validation_result.id == "unauthorized")
+                } else if(app_validation_result.id == "unauthorized" || app_validation_result.id == "forbidden") {
                     return this.error(`Environment ${this.colorEnv(env)} has an app that you seem to not have access rights to.`);
+                }
 
                 return this.error(`Environment ${this.colorEnv(env)} doesn't have a valid app.`);
             }
 
-            heroku_config_vars = yield this.heroku.get(`/apps/${config.app}/config-vars`);
-            heroku_config = yield this.heroku.get(`/apps/${config.app}`);
+            try {
+                heroku_config_vars = yield this.heroku.get(`/apps/${config.app}/config-vars`);
+                heroku_config = yield this.heroku.get(`/apps/${config.app}`);
+            } catch (error) {
 
+                this.error(`Error fetching the configurations of the app ${config.app}.`);
+                
+                if(this.more_verbose)
+                    this.verboseLog(error);
+            }
             output_object.db = dburl(this.getDatabaseUrlFromConfig(env, heroku_config_vars, sync_config));
 
         } else if(this.configHasOption(config, "use_local_db")){
@@ -218,8 +235,15 @@ var lib = {
 
             return yield Promise.resolve(true);
         } catch(error) {
+            if(!error.body) {
+                this.verboseLog("App validation error.");
+                
+                if(this.verbose)
+                    this.verboseLog(error);
+            } else {
+                this.verboseLog("App validation error: " + error.body.message);
+            }
 
-            this.verboseLog("App validation error: " + error.body.message);
             
             return yield Promise.resolve(error.body);
         }
@@ -580,13 +604,34 @@ var lib = {
         cli.styledHeader(msg);
     },
 
+    endingMessage : function () {
+        if(!this.show_messages)
+            return;
+
+        let all_ending_messages = [
+            "We did it! You are awesome!",
+            "High five! Oh... I don't have hands.\nNevermind... Yay still!",
+            "Keep doing what you do, you awesome bastard you!",
+            "Yay! We did it!",
+            "Phew, that was lot of crunching, but we did it!",
+            "Dude, now that was some serious database work! Radical!",
+            "Awesome work from the both of us!",
+            "Hey, you the best!"
+        ];
+
+        this.log();
+        this.log(`${cli.color.green(random_array_element(all_ending_messages))}`);
+        this.log();
+    },
+
     notify : function (msg, sound) {
         if(!msg)
             return;
 
         notifier.notify({
             title : "heroku-wp-database-sync",
-            message : msg
+            message : msg,
+            sound : sound
         });
     },
 

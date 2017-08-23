@@ -19,7 +19,7 @@ var tmp_mysql_db = {};
 
 function * run (context, heroku) {
 
-    library.notify("Starting database sync.", true);
+    library.notify("Starting database sync.");
 
     library.init({
         show_messages : !context.flags.hide,
@@ -302,6 +302,9 @@ function * run (context, heroku) {
         }
     }
 
+    library.notify("Your database sync is ready!", true);
+    
+    library.endingMessage();
 }
 
 module.exports = {
