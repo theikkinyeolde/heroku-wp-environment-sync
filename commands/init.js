@@ -5,6 +5,7 @@ const path        = require('path');
 const parseUrl    = require('parse-url');
 const esc_regex   = require('escape-string-regexp');
 const valid_url   = require('valid-url');
+const shell       = require('shelljs');
 const library     = require('../library/library.js');
 
 const valid_database_envs   = library.validDatabaseEnvs;
@@ -188,6 +189,17 @@ function * run (context, heroku) {
                 "name" : "production",
                 "app" : prod_app,
                 "db_env" : current_database_env,
+                "db_config" : {
+                    "user" : "root",
+                    "pass" : "",
+                    "name" : "test",
+                    "host" : "localhost",
+                    "ssh" : {
+                        "host" : "",
+                        "user" : "",
+                        "port" : "1512"
+                    }
+                },
                 "url" : "https://" + produrl
             },
             {

@@ -144,7 +144,22 @@ var lib = {
 
         let heroku_config, heroku_config_vars;
 
-        if(config.app != undefined && config.app != '') {
+        if (config.db_config) {
+            this.log("Using database configuration given in the syncfile.");
+
+            output_object.db = {
+                adapter : 'mysql',
+                host : config.db_config.host,
+                database : config.db_config.name,
+                user : config.db_config.user,
+                password : config.db_config.pass
+            };
+
+            if(config.db_config.ssh) {
+                output_object.db.ssh = config.db_config.ssh;
+            }
+
+        } else if(config.app != undefined && config.app != '') {
             var app_validation_result = yield this.validateApp(config.app);
 
             if(app_validation_result !== true && app_validation_result) {
@@ -168,7 +183,6 @@ var lib = {
                     this.verboseLog(error);
             }
             output_object.db = dburl(this.getDatabaseUrlFromConfig(env, heroku_config_vars, sync_config));
-
         } else if(this.configHasOption(config, "use_local_db")){
             let env_config = yield this.getEnvDatabaseConfig();
 
@@ -191,7 +205,7 @@ var lib = {
             return this.error(`Environment ${cli.color.yellow(env)} doesn't have a app defined, or it isn't a local.`);
         }
 
-        if(!(yield this.dbCheck(output_object.db.host, output_object.db.user, output_object.db.password, output_object.db.database))) {
+        if(!(yield this.dbCheck(output_object.db.host, output_object.db.user, output_object.db.password, output_object.db.database, output_object.db.ssh))) {
             return this.error(`Could not access the database of environment ${cli.color.yellow(env)}.`);
         }
 
@@ -330,7 +344,7 @@ var lib = {
         return yield Promise.resolve(env_config_file);
     },
 
-    dbCheck : function * (host, user, pass, database) {
+    dbCheck : function * (host, user, pass, database, ssh) {
         this.verboseLog(`Checking database access to ${database}.`);
 
         let mysql_auth = `-u${user} -h${host}`;

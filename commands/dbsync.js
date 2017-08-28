@@ -181,6 +181,9 @@ function * run (context, heroku) {
     if(run_scripts)
         library.runCommandsByName("before_fetch", from);
 
+    console.log(from);
+    return;
+
     library.shellExec(`mysqldump ${library.createMysqlAuthParameters(from.db.host, from.db.user, from.db.password)} ${from.db.database} ${additional_mysqldump_parameters} > ${tmpfile.name}`);
 
     if(run_scripts)
