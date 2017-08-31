@@ -184,13 +184,17 @@ function * run (context, heroku) {
 
     if(!fs.existsSync(tmpfile_name_cache)) {
         use_cache = false;
+        library.log(`No stored cache for ${colorEnv(from.name, from.app)}. Fetching from the database.`);
     }
 
     if(!use_cache) {
         library.log(`Getting the database from ${colorEnv(from.name, from.app)}`);
     
         library.shellExec(`mysqldump ${library.createMysqlAuthParameters(from.db.host, from.db.user, from.db.password)} ${from.db.database} ${additional_mysqldump_parameters} > ${tmpfile_name}`);
-        library.shellExec(`cp ${tmpfile_name} ${tmpfile_name_cache}`);
+
+        if(library.getUserConfigData("store_cache")) {
+            library.shellExec(`cp ${tmpfile_name} ${tmpfile_name_cache}`);
+        }
     } else {
         library.log(`Using cached dump from ${colorEnv(from.name, from.app)}.`);
         tmpfile_name = tmpfile_name_cache;

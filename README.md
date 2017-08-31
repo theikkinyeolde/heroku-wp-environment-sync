@@ -109,6 +109,19 @@ To connect to a database, simply type:
 heroku sync:connect environment_name
 ```
 
+### User configurations
+
+User configurations are stored in the ```~/.heroku-wp-environment-sync/user_config.json``` -file.
+At it's current state, there isn't really that much to configure except the dump caching.
+The available options are as follows:
+```
+{
+    "store_cache" : true
+}
+```
+
+* ```store_cache``` defines if cache are stored. The cache folder is ```~/.heroku-wp-environment-sync/cache/```.
+
 ### Help
 
 You can get more information about different commands with the help command.
@@ -120,6 +133,14 @@ heroku help sync:dbsync
 Also for troubleshooting consider using the ```--verbose``` and ```--more-verbose``` -flags.
 
 ## Changelog
+### 0.3.1 / 
+* Added dump caching for situations where fresh database dump doesn't matter. You can utilize earlier dump by using the ```--use-cache``` -flag.
+* Added user configurations for future user sepcific configurations. For starters, you can modify if the script stores cache.
+
+### 0.3.0 / 23.8.2017
+* Fixes to bugs conserning initialize and other stuff.
+* More notifications.
+
 ### 0.2.9 / 8.8.2017
 * Made changes to the library structure and refactored a bunch of stuff for the future.
 * Made error reporting more useful and added verbose mode and more-verbose mode for debugging uses.

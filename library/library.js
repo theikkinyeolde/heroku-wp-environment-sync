@@ -21,7 +21,7 @@ const synclocalfile             = '.synclocal';
 const needed_sync_file_version  = '0.2.3'
 const valid_database_envs       = ['JAWSDB_URL', 'CLEARDB_DATABASE_URL'];
 const home_sync_dir_name        = '.heroku-wp-environment-sync';
-
+const user_config_filename      = 'user_config.json';
 
 function random_range (min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -432,6 +432,7 @@ var lib = {
         }
 
         this.checkDatabseCacheFolderExists();
+        this.checkUserConfigExistence();
     },
 
     checkDatabseCacheFolderExists : function () {
@@ -746,6 +747,32 @@ var lib = {
         return location;
     },
 
+    getUserConfigurations : function () {
+        let filename = this.getSyncHomeDir() + '/' + user_config_filename;
+
+        return JSON.parse(fs.readFileSync(filename, 'utf-8'));
+    },
+
+    checkUserConfigExistence : function () {
+        let filename = this.getSyncHomeDir() + '/' + user_config_filename;
+
+        if(!fs.existsSync(filename)) {
+            fs.writeFileSync(filename, JSON.stringify({
+                'store_cache' : true
+            }, null, 4));
+        }
+    },
+
+    getUserConfigData : function (key) {
+        let config = this.getUserConfigurations();
+
+        if(typeof(config[key]) != undefined) {
+            return config[key];
+        }
+
+        return false;
+    },
+
     createSearchAndReplaceCommand : function (search, replace, dboptions, options) {
         let replace_exec_command = `php ${path.resolve(__dirname, "../")}/sar.php --user ${dboptions.user} `;
 
@@ -761,7 +788,7 @@ var lib = {
 
         return replace_exec_command;
     },
-    
+
     getTemporaryDumpFile : function (get_cache_filename, name) {
         if(get_cache_filename) {        
             var hash = crypto.createHmac('sha256', name).digest('hex');
