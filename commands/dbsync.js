@@ -4,10 +4,10 @@ const cli             = require('heroku-cli-util');
 const co              = require('co');
 const dburl           = require('parse-db-url');
 const shell           = require('shelljs');
-const tmp             = require('tmp');
 const randomstring    = require('randomstring');
 const path            = require('path');
 const os              = require('os');
+const tmp             = require('tmp');
 
 const library         = require('../library/library.js');
 
@@ -168,7 +168,8 @@ function * run (context, heroku) {
     library.log();
     library.header(`Getting the database from ${cli.color.yellow(from.name)}`);
 
-    var tmpfile = tmp.fileSync();
+    var tmpfile_name = library.getTemporaryDumpFile();
+    var tmpfile_name_cache = library.getTemporaryDumpFile(true, from.name + from.app);
 
     let additional_mysqldump_parameters = "";
 
@@ -176,18 +177,30 @@ function * run (context, heroku) {
         additional_mysqldump_parameters = "--single-transaction --quick";
     }
 
-    library.log(`Getting the database from ${colorEnv(from.name, from.app)}`);
-
     if(run_scripts)
         library.runCommandsByName("before_fetch", from);
+    
+    let use_cache = (context.flags['use-cache'] == true);
 
-    library.shellExec(`mysqldump ${library.createMysqlAuthParameters(from.db.host, from.db.user, from.db.password)} ${from.db.database} ${additional_mysqldump_parameters} > ${tmpfile.name}`);
+    if(!fs.existsSync(tmpfile_name_cache)) {
+        use_cache = false;
+    }
 
+    if(!use_cache) {
+        library.log(`Getting the database from ${colorEnv(from.name, from.app)}`);
+    
+        library.shellExec(`mysqldump ${library.createMysqlAuthParameters(from.db.host, from.db.user, from.db.password)} ${from.db.database} ${additional_mysqldump_parameters} > ${tmpfile_name}`);
+        library.shellExec(`cp ${tmpfile_name} ${tmpfile_name_cache}`);
+    } else {
+        library.log(`Using cached dump from ${colorEnv(from.name, from.app)}.`);
+        tmpfile_name = tmpfile_name_cache;
+    }
+        
     if(run_scripts)
         library.runCommandsByName("after_fetch", from);
 
-    if(context.flags['store-dumps']) {
-        library.shellExec(`cp ${tmpfile.name} ${os.tmpdir()}/heroku_wp_environment_sync_${from.name}.sql`);
+    if(context.flags['store-dumps'] && !use_cache) {
+        library.shellExec(`cp ${tmpfile_name} ${os.tmpdir()}/heroku_wp_environment_sync_${from.name}.sql`);
     }
 
     library.log(`Creating a temporary database (${tmp_mysql_db.database}).`);
@@ -205,7 +218,7 @@ function * run (context, heroku) {
         if(run_scripts)
             library.runCommandsByName("before_sync", tos[t]);
 
-        library.shellExec(`mysql ${tmp_mysql_auth} ${tmp_mysql_db.database} < ${tmpfile.name}`);
+        library.shellExec(`mysql ${tmp_mysql_auth} ${tmp_mysql_db.database} < ${tmpfile_name}`);
 
         let to_config = tos[t];
         let to_tmpfile = tmp.fileSync();
@@ -377,6 +390,11 @@ module.exports = {
         {
             name : 'skip-scripts',
             description : 'Skip the script running part.',
+            hasValue : false
+        },
+        {
+            name : 'use-cache',
+            description : 'Skip the mysqldump process and use database sql from cache.',
             hasValue : false
         },
         {

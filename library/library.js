@@ -13,6 +13,8 @@ const randomstring      = require('randomstring');
 const notifier          = require('node-notifier');
 const child_process     = require('child_process');
 const os                = require('os');
+const tmp               = require('tmp');
+const crypto            = require('crypto');
 
 const syncfilename              = 'syncfile';
 const synclocalfile             = '.synclocal';
@@ -74,6 +76,7 @@ var lib = {
         }
 
         this.checkHerokuHomeDirExists();
+
     },
 
     getTemporaryDatabaseInfo : function * () {
@@ -413,12 +416,30 @@ var lib = {
         return sync_config;
     },
 
+    getSyncHomeDir : function () {
+        return os.homedir() + '/' + home_sync_dir_name;
+    },
+
     checkHerokuHomeDirExists : function () {
-        let folder_name = os.homedir() + '/' + home_sync_dir_name;
+        let folder_name = this.getSyncHomeDir();
 
         if(fs.existsSync(folder_name)) {
             if(!fs.lstatSync(folder_name).isDirectory()) {
                 return this.error(`Ok, in your home directory ${home_sync_dir_name} exists, but it is a file.`);
+            }
+        } else {
+            fs.mkdirSync(folder_name);
+        }
+
+        this.checkDatabseCacheFolderExists();
+    },
+
+    checkDatabseCacheFolderExists : function () {
+        var folder_name = this.getSyncHomeDir() + '/cache/';
+
+        if(fs.existsSync(folder_name)) {
+            if(!fs.lstatSync(folder_name).isDirectory()) {
+                return this.error(`Ok, in your home directory ${home_sync_dir_name}/cache exists, but it is a file.`);
             }
         } else {
             fs.mkdirSync(folder_name);
@@ -739,6 +760,17 @@ var lib = {
         }
 
         return replace_exec_command;
+    },
+    
+    getTemporaryDumpFile : function (get_cache_filename, name) {
+        if(get_cache_filename) {        
+            var hash = crypto.createHmac('sha256', name).digest('hex');
+            var temporary_dump_file = this.getSyncHomeDir() + '/cache/' + hash + '.sql';
+
+            return temporary_dump_file;
+        }
+        
+        return tmp.fileSync().name;
     }
 }
 
