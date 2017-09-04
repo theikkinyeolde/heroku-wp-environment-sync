@@ -138,7 +138,7 @@ Also for troubleshooting consider using the ```--verbose``` and ```--more-verbos
 ## Changelog
 ### 0.3.1 / 4.9.2017
 * Added dump caching for situations where fresh database dump doesn't matter. You can utilize earlier dump by using the ```--use-cache``` -flag.
-* Added user configurations for future user sepcific configurations. For starters, you can modify if the script stores cache.
+* Added user configurations for future user specific configurations. For starters, you can modify if the script stores cache.
 
 ### 0.3.0 / 23.8.2017
 * Fixes to bugs conserning initialize and other stuff.
