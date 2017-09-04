@@ -182,7 +182,7 @@ function * run (context, heroku) {
     
     let use_cache = (context.flags['use-cache'] == true);
 
-    if(!fs.existsSync(tmpfile_name_cache)) {
+    if(!fs.existsSync(tmpfile_name_cache) && use_cache) {
         use_cache = false;
         library.log(`No stored cache for ${colorEnv(from.name, from.app)}. Fetching from the database.`);
     }
@@ -398,7 +398,7 @@ module.exports = {
         },
         {
             name : 'use-cache',
-            description : 'Skip the mysqldump process and use database sql from cache.',
+            description : 'Skip the mysqldump process and use database sql from cache. For situations where fresh database dump isn\'t necessary.',
             hasValue : false
         },
         {

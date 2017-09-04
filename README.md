@@ -85,6 +85,9 @@ You can also use --to and --from to specify locations, bypassing the setups enti
 heroku sync:dbsync --from from_environment_name --to to_environment_name
 ```
 
+Currently by default, the sync will store a dump to the cache folder which locates in ```~/.heroku-wp-environment-sync/cache/```.
+If for some reason you don't want to fetch a fresh dump (for instance, you might have an error in your syncfile search and replaces and after correcting the error you don't need a fresh dump) you can use ```--use-cache``` -flag.
+
 ### Dumping
 
 To dump a database from an environment in the syncfile, use:
