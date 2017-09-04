@@ -136,7 +136,7 @@ heroku help sync:dbsync
 Also for troubleshooting consider using the ```--verbose``` and ```--more-verbose``` -flags.
 
 ## Changelog
-### 0.3.1 / 
+### 0.3.1 / 4.9.2017
 * Added dump caching for situations where fresh database dump doesn't matter. You can utilize earlier dump by using the ```--use-cache``` -flag.
 * Added user configurations for future user sepcific configurations. For starters, you can modify if the script stores cache.
 
