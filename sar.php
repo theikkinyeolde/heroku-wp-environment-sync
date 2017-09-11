@@ -209,7 +209,7 @@ $tables = $mysql->query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCH
 $updated_rows = 0;
 
 if($tables && !empty($search) && !empty($replace)) {
-    foreach($tables->fetch_all(MYSQLI_ASSOC) as $table) {
+    while($table = $tables->fetch_assoc()) {
         $table_name = $table['TABLE_NAME'];
 
         $primary_key = $mysql->query("SHOW INDEX FROM " . $table_name . " WHERE Key_name = 'PRIMARY'")->fetch_array()['Column_name'];
@@ -224,7 +224,7 @@ if($tables && !empty($search) && !empty($replace)) {
             if(!$columns)
                 continue;
 
-            foreach($columns->fetch_all(MYSQLI_ASSOC) as $column) {
+            while($column = $columns->fetch_assoc()) {
 
                 $column_name = $column['COLUMN_NAME'];
                 $column_type = $column['COLUMN_TYPE'];
@@ -239,7 +239,7 @@ if($tables && !empty($search) && !empty($replace)) {
                 if(!$rows)
                     continue;
 
-                foreach($rows->fetch_all(MYSQLI_ASSOC) as $data) {
+                while($data = $rows->fetch_assoc()) {
                     $unserialized_data = @unserialize($data[$column_name]);
 
                     if($unserialized_data === FALSE) {
