@@ -73,6 +73,7 @@ function * run (context, heroku) {
 
     parameters.push(`-u${database.user}`);
     parameters.push(`-h${database.host}`);
+    parameters.push('-A');
     parameters.push(`${database.database}`);
 
     var mysql = spawn('mysql', parameters, {stdio : 'inherit'});

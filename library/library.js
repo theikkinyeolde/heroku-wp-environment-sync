@@ -112,9 +112,13 @@ var lib = {
         return output;
     },
 
-    colorEnv : function (env, app) {
+    colorEnv : function (env, app, local) {
         if(!app)
             return `${cli.color.yellow(env)}`;
+
+        if(local) {
+            return `${cli.color.yellow(env)} (${cli.color.magenta(local)})`;
+        }
 
         return `${cli.color.yellow(env)} (${cli.color.app(app)})`;
     },
@@ -188,7 +192,8 @@ var lib = {
                 host : env_config.parsed.DB_HOST,
                 database : env_config.parsed.DB_NAME,
                 user : env_config.parsed.DB_USER,
-                password : pass
+                password : pass,
+                local : env_config.parsed.DB_NAME
             };
         } else {
             return this.error(`Environment ${cli.color.yellow(env)} doesn't have a app defined, or it isn't a local.`);

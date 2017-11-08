@@ -155,7 +155,7 @@ function * run (context, heroku) {
     library.log(`I'm going to put that database after search and replace to these places:`);
 
     for(let t in tos) {
-        library.log(`- ${colorEnv(tos[t].name, tos[t].app)}`);
+        library.log(`- ${colorEnv(tos[t].name, tos[t].app, tos[t].local)}`);
     }
 
     if(yield library.confirmPrompt(`Are you ok with this?`)) {
