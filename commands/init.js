@@ -7,7 +7,7 @@ const esc_regex   = require('escape-string-regexp');
 const valid_url   = require('valid-url');
 const library     = require('../library/library.js');
 
-const valid_database_envs   = library.validDatabaseEnvs;
+const valid_database_envs   = library.valid_database_envs;
 
 function * run (context, heroku) {
     library.init({
