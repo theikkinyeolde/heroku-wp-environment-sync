@@ -102,6 +102,10 @@ function * run (context, heroku) {
         additional_mysqldump_parameters = "--single-transaction --quick";
     }
 
+    if (environment_config) {
+        additional_mysqldump_parameters += library.getMysqldumpOptionString(environment_config);
+    }
+
     let mysql_auth_params = library.createMysqlAuthParameters(database.host, database.user, database.password, database.database);
 
     let dump_cmd = `mysqldump ${mysql_auth_params} ${additional_mysqldump_parameters} > ${location}`;
