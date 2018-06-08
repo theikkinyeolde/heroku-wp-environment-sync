@@ -403,7 +403,7 @@ var lib = {
         let dump_options = '';
         if (env.mysqldump_options) {
             dump_options = ' ' + env.mysqldump_options;
-            dump_options = dump_options.replace('#DB_NAME#', env.db.database);
+            dump_options = dump_options.replace(/#DB_NAME#/g, env.db.database);
         }
         return dump_options;
     },
