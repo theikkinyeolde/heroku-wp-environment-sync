@@ -221,6 +221,10 @@ var lib = {
             output_object.scripts = config.scripts;
         }
 
+        if(config.mysqldump_options != undefined) {
+            output_object.mysqldump_options = config.mysqldump_options;
+        }
+
         if(config.url != undefined) {
             output_object.url = config.url;
         }
@@ -393,6 +397,15 @@ var lib = {
             }
         }
         return false;
+    },
+
+    getMysqldumpOptionString : function (env) {
+        let dump_options = '';
+        if (env.mysqldump_options) {
+            dump_options = ' ' + env.mysqldump_options;
+            dump_options = dump_options.replace(/#DB_NAME#/g, env.db.database);
+        }
+        return dump_options;
     },
 
     getSyncFile : function () {

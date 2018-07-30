@@ -176,6 +176,7 @@ function * run (context, heroku) {
     if(!context.flags['lock-database']) {
         additional_mysqldump_parameters = "--single-transaction --quick";
     }
+    additional_mysqldump_parameters += library.getMysqldumpOptionString(from);
 
     if(run_scripts)
         library.runCommandsByName("before_fetch", from);

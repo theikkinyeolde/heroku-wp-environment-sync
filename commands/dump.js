@@ -101,7 +101,11 @@ function * run (context, heroku) {
     if(!context.flags['lock-database']) {
         additional_mysqldump_parameters = "--single-transaction --quick";
     }
-
+  
+    if (environment_config) {
+        additional_mysqldump_parameters += library.getMysqldumpOptionString(environment_config);
+    }
+  
     additional_mysqldump_parameters += " --column-statistics=0"; // MySQL 8 compatibility workaround (https://bugs.mysql.com/bug.php?id=89825)
 
     let mysql_auth_params = library.createMysqlAuthParameters(database.host, database.user, database.password, database.database);
