@@ -102,6 +102,8 @@ function * run (context, heroku) {
         additional_mysqldump_parameters = "--single-transaction --quick";
     }
 
+    additional_mysqldump_parameters += " --column-statistics=0"; // MySQL 8 compatibility workaround (https://bugs.mysql.com/bug.php?id=89825)
+
     let mysql_auth_params = library.createMysqlAuthParameters(database.host, database.user, database.password, database.database);
 
     let dump_cmd = `mysqldump ${mysql_auth_params} ${additional_mysqldump_parameters} > ${location}`;
