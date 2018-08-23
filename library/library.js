@@ -401,10 +401,14 @@ var lib = {
 
     getMysqldumpOptionString : function (env) {
         let dump_options = '';
+        
         if (env.mysqldump_options) {
             dump_options = ' ' + env.mysqldump_options;
             dump_options = dump_options.replace(/#DB_NAME#/g, env.db.database);
         }
+
+        dump_options += " --column-statistics=0"; // MySQL 8 compatibility workaround (https://bugs.mysql.com/bug.php?id=89825)
+
         return dump_options;
     },
 
