@@ -183,14 +183,14 @@ function * run (context, heroku) {
                 "to"   : "localhost",
             }
         ],
-        "environments" : [
-            {
+        "environments" : {
+            "production": {
                 "name" : "production",
                 "app" : prod_app,
                 "db_env" : current_database_env,
                 "url" : "https://" + produrl
             },
-            {
+            "localhost" : {
                 "name" : "localhost",
                 "mutable" : true,
                 "replaces" : replaces,
@@ -209,7 +209,7 @@ function * run (context, heroku) {
                     "use_local_db"
                 ]
             }
-        ]
+        }
     };
 
     fs.writeFileSync(`${path.resolve('./')}/${library.default_sync_filename + '.json'}`, JSON.stringify(syncfile_template, null, 4));

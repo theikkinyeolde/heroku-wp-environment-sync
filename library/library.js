@@ -15,9 +15,11 @@ const child_process     = require('child_process');
 const os                = require('os');
 const tmp               = require('tmp');
 const crypto            = require('crypto');
+const lodash            = require('lodash');
 
 const syncfilename              = 'syncfile';
-const synclocalfile             = '.synclocal';
+const syncfilelocal             = '.local.syncfile';
+const syncenvlocalfile          = '.synclocal';
 const needed_sync_file_version  = '0.2.3'
 const valid_database_envs       = ['JAWSDB_URL', 'CLEARDB_DATABASE_URL'];
 const home_sync_dir_name        = '.heroku-wp-environment-sync';
@@ -269,9 +271,9 @@ var lib = {
 
         let synclocal_creation_reason = "";
 
-        if(fs.existsSync(synclocalfile)) {
+        if(fs.existsSync(syncenvlocalfile)) {
             env_config_file = dotenv.config({
-                'path' : './' + synclocalfile
+                'path' : './' + syncenvlocalfile
             });
 
             synclocal_used = true;
@@ -298,10 +300,10 @@ var lib = {
 
             let db_name = yield cli.prompt("DB_NAME (Database name)");
 
-            fs.writeFileSync(`./${synclocalfile}`, `DB_HOST=${db_host}\nDB_USER=${db_user}\nDB_PASSWORD=${db_pass}\nDB_NAME=${db_name}`);
+            fs.writeFileSync(`./${syncenvlocalfile}`, `DB_HOST=${db_host}\nDB_USER=${db_user}\nDB_PASSWORD=${db_pass}\nDB_NAME=${db_name}`);
 
             env_config_file = dotenv.config({
-                'path' : './' + synclocalfile
+                'path' : './' + syncenvlocalfile
             });
         }
 
@@ -381,7 +383,7 @@ var lib = {
             if(!config.environments[c])
                 continue;
 
-            if(env == config.environments[c].name) {
+            if(env == config.environments[c].name || env == c) {
                 return config.environments[c];
             }
         }
@@ -407,8 +409,6 @@ var lib = {
             dump_options = dump_options.replace(/#DB_NAME#/g, env.db.database);
         }
 
-        dump_options += " --column-statistics=0"; // MySQL 8 compatibility workaround (https://bugs.mysql.com/bug.php?id=89825)
-
         return dump_options;
     },
 
@@ -433,6 +433,20 @@ var lib = {
 
         if(!sync_config.version || semver.gt(needed_sync_file_version, sync_config.version)) {
             return this.error(`Your current syncfile seems to be too old. Needed syncfile version ${needed_sync_file_version} and you have ${sync_config.version}. You better initialize the syncfile again.`);
+        }
+
+        let sync_local_config = {};
+
+        if(!fs.existsSync(process.cwd() + '/' + syncfilelocal + '.js')) {
+            if(fs.existsSync(process.cwd() + '/' + syncfilelocal + '.json')) {
+                sync_local_config = JSON.parse(fs.readFileSync(process.cwd() + '/' + syncfilelocal + '.json', 'utf8'));
+            }
+        } else {
+            sync_local_config = require(process.cwd() + '/' + syncfilelocal + '.js');
+        }
+
+        if(!lodash.isEmpty(sync_local_config)) {
+            sync_config = lodash.merge(sync_config, sync_local_config);
         }
 
         return sync_config;

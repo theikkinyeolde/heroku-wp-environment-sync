@@ -8,6 +8,7 @@ const randomstring    = require('randomstring');
 const path            = require('path');
 const os              = require('os');
 const tmp             = require('tmp');
+const lodash          = require('lodash');
 
 const library         = require('../library/library.js');
 
@@ -50,7 +51,7 @@ function * run (context, heroku) {
         use_to_from = true;
     }
 
-    if(sync_config.environments == undefined || !sync_config.environments.length) {
+    if(sync_config.environments == undefined || lodash.isEmpty(sync_config.environments)) {
         return library.error(`No environments defined, exiting.`);
     }
 
