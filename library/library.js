@@ -104,7 +104,7 @@ var lib = {
         let output = `-h${host} -u${user}`;
 
         if(pass) {
-            output += ` -p${pass}`;
+            output += ` -p"${this.cmdLinePwdSanitize(pass)}"`;
         }
 
         if(database) {
@@ -344,16 +344,20 @@ var lib = {
         return yield Promise.resolve(env_config_file);
     },
 
+    cmdLinePwdSanitize : function (pass) {
+        return pass.replace('"', '\\"');
+    },
+
     dbCheck : function * (host, user, pass, database) {
         this.verboseLog(`Checking database access to ${database}.`);
 
         let mysql_auth = `-u${user} -h${host}`;
 
         if(pass) {
-            mysql_auth += ` -p${pass}`;
+            mysql_auth += ` -p"${this.cmdLinePwdSanitize(pass)}"`;
         }
-        
-        shell.exec(`mysql ${mysql_auth} -e 'use ${database}'`, {silent : true});
+
+        shell.exec(`mysql ${mysql_auth} -e 'use ${database}'`, {silent : !this.more_verbose});
     
         if(shell.error()) {
             return yield Promise.resolve(false);
@@ -813,7 +817,7 @@ var lib = {
         let replace_exec_command = `php ${path.resolve(__dirname, "../")}/sar.php --user ${dboptions.user} `;
 
         if(dboptions.password != undefined && dboptions.password.length > 0) {
-            replace_exec_command += `--pass ${dboptions.password} `;
+            replace_exec_command += `--pass "${this.cmdLinePwdSanitize(dboptions.password)}" `;
         }
 
         replace_exec_command += `--host ${dboptions.host} --db ${dboptions.database} --search "${search}" --replace "${replace}"`;
