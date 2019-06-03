@@ -99,7 +99,7 @@ function * run (context, heroku) {
     let additional_mysqldump_parameters = "";
 
     if(!context.flags['lock-database']) {
-        additional_mysqldump_parameters = "--single-transaction --quick";
+        additional_mysqldump_parameters = "--single-transaction --quick --column-statistics=0";
     }
 
     let mysql_auth_params = library.createMysqlAuthParameters(database.host, database.user, database.password, database.database);
