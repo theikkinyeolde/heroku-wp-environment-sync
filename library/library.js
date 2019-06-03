@@ -98,7 +98,7 @@ var lib = {
         return tmp_mysql_db;
     },
 
-    createMysqlAuthParameters : function (host, user, pass, database) {
+    createMysqlAuthParameters : function (host, user, pass, database) {
         let output = `-h${host} -u${user}`;
 
         if(pass) {
