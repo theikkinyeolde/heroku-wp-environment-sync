@@ -5,8 +5,8 @@ A heroku plugin to sync different wordpress environments. Especially to sync dat
 ## Requirements
 
 - Heroku cli (https://devcenter.heroku.com/articles/heroku-cli)
-- MySQL command line client
-- PHP
+- MySQL command line client (also mysqldump)
+- WP CLI
 
 ## Installation
 
@@ -17,67 +17,21 @@ heroku plugins:install heroku-wp-environment-sync
 
 ## Usage
 
-First you need to create syncfile.json in your project folder. You can create one from a template by running this command:
+First you need to create syncfile.js in your project folder. You can create one from a template by running this command:
+
 ```
-heroku sync:init
+heroku sync:init [production-app-name] [staging-app-name]
 ```
 
-The initialization command will ask you questions and creates a syncfile according to those answers.
-The syncfile can (and probably have to) be modified by hand afterwards.
+The different environments are created for you in the beginning, but you can also create new ones in the syncfile.js `environments` -object.
 
-Then you need to edit your syncfile.json to correspond the different environments.
-The search and replaces can be added as many as needed and are defined as followed:
-```
-"replaces" : [
-    {
-        "from" : [
-            "http://www.domain.com",
-            "https://www.domain.com"
-        ],
-        "to" : "http://localhost"
-    }
-]
-```
-
-Every string in the "from" array is changed into the "to" string, so you can funnel multiple urls into one.
-
-You can also use regular expression in the search and replace with the regex -option, like so:
-```
-"replaces" : [
-    {
-        "from" : [
-            "https?:\\/\\/www\.domain\.com"
-        ],
-        "to" : "http://localhost",
-        "regex" : true
-    }
-]
-```
-
-In the syncfile, you need to set the environments that you can sync to as mutable (unless you have specified the --no-mutable-checks -option).
-Like so:
-```
-{
-    "name": "production",
-    "app": "production_heroku_app_name"
-},
-{
-    "name": "staging",
-    "app": "staging_heroku_app_name",
-    "mutable": true
-}
-```
 
 ### Syncing
 
-To sync your default setup (which, if you created the syncfile using heroku sync:init, is the local), use:
-```
-heroku sync:dbsync
-```
+To sync, you must specify the name of the setup so the plugin can get the information needed.
 
-If you want to specify the setup, use:
 ```
-heroku sync:dbsync setup_name
+heroku sync:dbsync [setup-name]
 ```
 
 You can also use --to and --from to specify locations, bypassing the setups entirely.
@@ -85,57 +39,27 @@ You can also use --to and --from to specify locations, bypassing the setups enti
 heroku sync:dbsync --from from_environment_name --to to_environment_name
 ```
 
-Currently by default, the sync will store a dump to the cache folder which locates in ```~/.heroku-wp-environment-sync/cache/```.
-If for some reason you don't want to fetch a fresh dump (for instance, you might have an error in your syncfile search and replaces and after correcting the error you don't need a fresh dump) you can use ```--use-cache``` -flag.
-
 ### Dumping
 
 To dump a database from an environment in the syncfile, use:
 ```
-heroku sync:dump environment_name
+heroku sync:dump [environment-name]
 ```
-
-You can also specify just a app and bypass the syncfile:
-```
-heroku sync:dump --app heroku_app_name
-```
-
-Or you can just paste a mysql url, like so:
-```
-heroku sync:dump --mysql-url mysql://test:test@test.com/test_db
-```
-
-### Connecting
-
-To connect to a database, simply type:
-```
-heroku sync:connect environment_name
-```
-
-### User configurations
-
-User configurations are stored in the ```~/.heroku-wp-environment-sync/user_config.json``` -file.
-At it's current state, there isn't really that much to configure except the dump caching.
-The available options are as follows:
-```
-{
-    "store_cache" : true
-}
-```
-
-* ```store_cache``` defines if cache are stored. The cache folder is ```~/.heroku-wp-environment-sync/cache/```.
 
 ### Help
 
 You can get more information about different commands with the help command.
 For example:
+
 ```
 heroku help sync:dbsync
 ```
 
-Also for troubleshooting consider using the ```--verbose``` and ```--more-verbose``` -flags.
-
 ## Changelog
+
+### 0.5.0 / 26.2.2019
+* Rewrote the whole plugin to use the new oclif -framework that heroku cli nowaday uses. Many of the features were removed in the process. These are going to come back gradually if need for them rises.
+
 ### 0.3.1 / 4.9.2017
 * Added dump caching for situations where fresh database dump doesn't matter. You can utilize earlier dump by using the ```--use-cache``` -flag.
 * Added user configurations for future user specific configurations. For starters, you can modify if the script stores cache.
