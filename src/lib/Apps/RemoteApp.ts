@@ -14,6 +14,7 @@ import Syncfile from '../Syncfile';
 import Colors from '../Colors';
 import CacheHandler from '../CacheHandler';
 import Globals from '../Globals';
+import MySQL from '../MySQL';
 
 export default class RemoteApp implements AppInterface {
     name : string
@@ -22,7 +23,7 @@ export default class RemoteApp implements AppInterface {
     db_mysql_url : string = ""
     db_envs : {[id : string] : string} = {}
     
-    db_config : DBConfig = new DBConfig()
+    db_config : DBConfig = new DBConfig("", "", "")
     info : Heroku.App = {}
     envs : {[id : string] : string} = {}
     domains : Domain [] = []
@@ -121,6 +122,8 @@ export default class RemoteApp implements AppInterface {
     async getDump (filename : string | null = null, use_cache = false) {
         this.cache = new CacheHandler(this.env)
 
+        await this.verifyDatabaseExistance()
+
         const dump_filename = await this.cache.getDumpFilename(filename, use_cache)
         
         if(dump_filename) {
@@ -158,7 +161,7 @@ export default class RemoteApp implements AppInterface {
 
             let interval = setInterval(interval_func, 1000)
 
-            await Cmd.exec(`${await this.db_config.toDumpCmd()} > ${this.sql_dump_file}`)
+            await Cmd.execParsedErrors(`${await this.db_config.toDumpCmd()} > ${this.sql_dump_file}`)
             
             clearInterval(interval)
 
@@ -172,7 +175,19 @@ export default class RemoteApp implements AppInterface {
         return this.sql_dump_file
     }
 
+    async verifyDatabaseExistance () {
+        if(!this.db_config) {
+            return false
+        }
+
+        if(!await MySQL.databaseExists(this.db_config)) {
+            ux.error(`Database doesn't exist for ${this.env ? Colors.env(this.env.name) : ''} (${Colors.app(this.name)})`)
+        }
+    }
+
     async pushDump (filename : string | null = null) {
+        await this.verifyDatabaseExistance()
+        
         if(!filename) {
             ux.error(`Dump filename is empty.`)
             return false
@@ -272,7 +287,7 @@ export default class RemoteApp implements AppInterface {
             return false;
         }
 
-        const cache_data = await this.cache.getCacheDataFile()
+        const cache_data = await CacheHandler.getCacheDataFile()
         
         console.log(cache_data)
         

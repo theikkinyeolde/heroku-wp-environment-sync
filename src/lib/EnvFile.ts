@@ -57,7 +57,7 @@ export default class EnvFile {
     }
 
     getDBConfig () {
-        var dbconfig = new DBConfig();
+        var dbconfig = new DBConfig("", "", "");
         dbconfig.name = ((this.vars.DB_NAME) ? this.vars.DB_NAME : "")
 
         dbconfig.host = ((this.vars.DB_HOST) ? this.vars.DB_HOST : "localhost")

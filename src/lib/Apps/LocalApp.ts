@@ -9,6 +9,7 @@ import Cmd from '../Cmd';
 import Env from '../Structs/Env';
 import Colors from '../Colors';
 import CacheHandler from '../CacheHandler';
+import MySQL from '../MySQL';
 
 export default class LocalApp implements AppInterface {
     name : string
@@ -48,16 +49,30 @@ export default class LocalApp implements AppInterface {
             this.sql_dump_file = dump_filename
         }
 
+        await this.verifyDatabaseExistance()
+
         ux.action.start(`Fetching database from ${Colors.app(this.name)}`)
         
-        await Cmd.exec(`${await this.db_config.toDumpCmd()} > ${this.sql_dump_file}`)
+        await Cmd.execParsedErrors(`${await this.db_config.toDumpCmd()} > ${this.sql_dump_file}`)
         
         ux.action.stop()
 
         return this.sql_dump_file
     }
 
+    async verifyDatabaseExistance () {
+        if(!this.db_config) {
+            return false
+        }
+
+        await MySQL.localDatabaseCreationQuestionare(this.db_config)
+
+        return true
+    }
+
     async pushDump (filename : string) {
+        await this.verifyDatabaseExistance()
+
         ux.action.start(`Pushing dump to ${Colors.localApp(this.name)}`)
         
         await Cmd.exec(`mysql ${await this.db_config.authString()} ${this.db_config.name} < ${filename}`)

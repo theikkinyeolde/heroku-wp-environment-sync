@@ -132,6 +132,8 @@ export default class Syncfile {
                 }
             }
         }
+
+        return null
     }
 
     async addSetup (name : string, from : string, to : string []) {

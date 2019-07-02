@@ -9,6 +9,8 @@ import LocalApp from '../../lib/Apps/LocalApp';
 import Colors from '../../lib/Colors';
 import WP from '../../lib/WP';
 import EnvFile from '../../lib/EnvFile';
+import MySQL from '../../lib/MySQL';
+import DBConfig from '../../lib/Structs/DBConfig';
 
 export default class InitCommand extends SyncHelperCommand {
     static description = 'Initialize the syncfile configurations.'
@@ -37,6 +39,7 @@ export default class InitCommand extends SyncHelperCommand {
             ux.error(`${Colors.file("syncfile.js")} already exists. Remove the earlier one to run this command!`)
         }
 
+        
         var env_file = new EnvFile();
 
         // Handle production
@@ -65,6 +68,10 @@ export default class InitCommand extends SyncHelperCommand {
             let local_dev_server = await ux.prompt(`Input your local dev server address`, {
                 default : Globals.default_local_server
             })
+
+            let local_db_config = env_file.getDBConfig();
+            
+            await MySQL.localDatabaseCreationQuestionare(local_db_config)
 
             ux.action.start("Finding wordpress installation location.")
 

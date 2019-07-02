@@ -15,6 +15,12 @@ export default class Colors {
         return c(msg)
     }
 
+    static db (msg : string) {
+        const c = color.rgb(100, 220, 100)
+
+        return c(msg)
+    }
+
     static replace (msg : string) {
         return color.magenta(msg)
     }

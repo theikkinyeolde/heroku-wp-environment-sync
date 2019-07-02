@@ -14,7 +14,7 @@ export default class WP {
         const cmd = await this.searchReplaceCommand(from, to)
 
         if(cmd) {
-            const ret = await Cmd.exec(cmd) as string
+            const ret = await Cmd.execParsedErrors(cmd) as string
             const matches = ret.match(/Made ([0-9]+) replacements\./m)
 
             if(matches) {
@@ -42,24 +42,22 @@ export default class WP {
     }
 
     static async checkWPInstallation (path : string) {
-        const cmd = await Cmd.exec(`export \`cat .env\` && wp core is-installed --path="${path}" ${this.getSurpressArg()}`)
-
-        if(cmd) {
-            return false
-        }
-
-        return true
-    }
-    
-    static getSurpressArg () {
-        return `--require="${Globals.sync_plugin_root_folder}/suppress_errors.php"`
+        return new Promise((resolve, reject) => {
+            Cmd.execParsedErrors(`export \`cat .env\` && wp core is-installed --path="${path}"`, false)
+                .catch(() => {
+                    resolve(false)
+                })
+                .then(() => {
+                    resolve(true)
+                })
+        })
     }
 
     static async searchReplaceCommand (from : string | RegExp, to : string) {
         const local_env = await Syncfile.instance.getLocalEnv();
 
         if(local_env && local_env.options && local_env.options.wp_dir) {
-            return `export \`cat .env\` && wp search-replace ${this.getSurpressArg()} --path="${local_env.options.wp_dir}" --url="${from}" "${from}" "${to}" --recurse-objects --precise ${(from instanceof RegExp) ? '--regex' : ''}`
+            return `export \`cat .env\` && wp search-replace --path="${local_env.options.wp_dir}" --url="${from}" "${from}" "${to}" --recurse-objects --precise ${(from instanceof RegExp) ? '--regex' : ''}`
         }
 
         return null

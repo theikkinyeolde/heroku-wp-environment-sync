@@ -26,4 +26,6 @@ export default interface AppInterface {
     pushDump (filename : string) : Promise<boolean> | boolean
 
     setEnv (env : Env | null) : void
+
+    verifyDatabaseExistance() : void
 }

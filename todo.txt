@@ -1,8 +1,8 @@
 
 ### TODO
 
-* Check that the database exists.
 * Test the connection and give error.
+* Check that the local database exists.
 * From production to staging
 * From localhost to staging
 
@@ -13,6 +13,7 @@
 
 ### DONE
 
+* Check that the local database exists.
 * Deal with .env comments
 * CMD error reporting
 * Check that wp cli exists.

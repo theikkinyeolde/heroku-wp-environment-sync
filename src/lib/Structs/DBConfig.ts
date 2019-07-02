@@ -4,6 +4,7 @@ import ux from 'cli-ux'
 import MySQL from '../MySQL';
 import Colors from '../Colors';
 import Cmd from '../Cmd';
+import EnvFile from '../EnvFile';
 
 export default class DBConfig {
     name : string = ""
@@ -11,9 +12,17 @@ export default class DBConfig {
     port : string = ""
     username : string = ""
     password : string = ""
+    
+    constructor(name : string, username : string, password : string, host : string = "127.0.0.1", port = "3306") {
+        this.name = name
+        this.username = username
+        this.password = password
+        this.host = host
+        this.port = port
+    }
 
     static fromURL (url : string) {
-        var db_config = new DBConfig()
+        var db_config = new DBConfig("","","")
 
         let parsed_url = new urlparse(url)
 
@@ -33,7 +42,7 @@ export default class DBConfig {
     }
 
     authString () {
-        return `-u"${this.username}" -h"${this.host}" --port="${this.port}"`
+        return `${(this.password) ? `-p"${this.password}"`: ''} -u"${this.username}" -h"${this.host}" --port="${this.port}"`
     }
 
     toURL () {
@@ -54,12 +63,6 @@ export default class DBConfig {
         additional_arguments.push("--set-gtid-purged=OFF")
         additional_arguments.push("--quick")
 
-        let password_prefix = ""
-
-        if(this.password) {
-            password_prefix = `export MYSQL_PWD="${this.password}"`
-        }
-
-        return `${password_prefix} && mysqldump ${this.authString()} ${additional_arguments.join(" ")} ${this.name}`
+        return `mysqldump ${this.authString()} ${additional_arguments.join(" ")} ${this.name}`
     }
 }

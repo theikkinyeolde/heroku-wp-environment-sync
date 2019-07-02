@@ -121,22 +121,6 @@ export default class DBSyncCommand extends SyncHelperCommand {
     async run() {
         this.printLogo()
 
-        let cache_file = new CacheDataFile()
-        cache_file.projects["TEST"] = new CacheDataProject("TEST")
-        cache_file.projects["TEST"].replaces.push(new CacheDataEnvReplaces("perse", "paska", [
-            "www.perse.com"
-        ]))
-
-        let json = JSON.stringify(cache_file)
-
-        console.log(json)
-
-        cache_file = Object.assign(new CacheDataFile, JSON.parse(json))
-
-        console.log(cache_file.projects["TEST"].replaces)
-
-        return
-
         const { flags, args } = this.parse(DBSyncCommand)
 
         if(flags.verbose && !flags["more-verbose"]) {
