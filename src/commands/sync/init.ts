@@ -8,6 +8,7 @@ import Syncfile from '../../lib/Syncfile'
 import LocalApp from '../../lib/Apps/LocalApp';
 import Colors from '../../lib/Colors';
 import WP from '../../lib/WP';
+import EnvFile from '../../lib/EnvFile';
 
 export default class InitCommand extends SyncHelperCommand {
     static description = 'Initialize the syncfile configurations.'
@@ -32,6 +33,12 @@ export default class InitCommand extends SyncHelperCommand {
 
         let new_syncfile = new Syncfile(this.heroku)
 
+        if(await new_syncfile.exists()) {
+            ux.error(`${Colors.file("syncfile.js")} already exists. Remove the earlier one to run this command!`)
+        }
+
+        var env_file = new EnvFile();
+
         // Handle production
         {
             await new_syncfile.envFromApp("production", new RemoteApp(args.production))
@@ -47,15 +54,34 @@ export default class InitCommand extends SyncHelperCommand {
             }
         }
 
+        {
+            new_syncfile.name = await ux.prompt(`Input the projects name`, {
+                default : args.production
+            })
+        }
+
         // Handle localhost
         {
             let local_dev_server = await ux.prompt(`Input your local dev server address`, {
                 default : Globals.default_local_server
             })
-            
-            let wp_installation_dir = await ux.prompt(`Input the path to your wordpress installation folder`, {
-                default : Globals.default_wp_installation_dir
-            })
+
+            ux.action.start("Finding wordpress installation location.")
+
+            let wp_installation_dir = await WP.searchWPLocation()
+
+            ux.action.stop()
+
+            if(wp_installation_dir == false) {
+                ux.log()
+                ux.log(`Tried to search wordpress installation folder automatically, but failed.`)
+
+                wp_installation_dir = await ux.prompt(`Input the path to your wordpress installation folder`, {
+                    default : Globals.default_wp_installation_dir
+                })
+            }
+
+            wp_installation_dir = wp_installation_dir as string
 
             if(!await WP.checkWPInstallation(wp_installation_dir)) {
                 ux.error(`Seems that wp installation directory (${Colors.file(wp_installation_dir)}) isn't a correct wp installation directory.`)

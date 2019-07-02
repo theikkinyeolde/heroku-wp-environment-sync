@@ -1,12 +1,22 @@
 
 ### TODO
 
+* Check that the database exists.
+* Test the connection and give error.
+* From production to staging
+* From localhost to staging
+
+* Check if syncfile.json exists and prompt to move to syncfile.js if it doesn't exist.
+
+* Create a check that looks what replaces actually replace something and cache them to do those only. Still give the flag to rescan replaces.
+
+
+### DONE
+
+* Deal with .env comments
+* CMD error reporting
+* Check that wp cli exists.
 * Check if the env file exists.
 * Check that mysql tools exists.
-* Check that wp cli exists.
-* Check that the database exists.
-* Test the connection
-
-* Check if syncfile.json exists and prompt to move to syncfile.js
-
-* CMD error reporting
+* Scan wordpress location automatically on sync:init
+* Check that the wordpress installation is valid when initing!

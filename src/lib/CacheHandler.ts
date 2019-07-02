@@ -6,25 +6,16 @@ import * as tmp from 'tmp'
 import Globals from './Globals';
 import Env from './Structs/Env';
 
+
+import CacheDataFile, { CacheDataProject, CacheDataEnvReplaces } from './Structs/CacheDataFile'
+
 export default class CacheHandler {
     env : Env | null
 
     static status : {[id : string] : boolean} = {}
 
-    static instance : CacheHandler | null = null
-
     constructor (env : Env | null) {
         this.env = env
-
-        CacheHandler.instance = this
-    }
-
-    static init (env : Env | null) {
-        if(this.instance) {
-            return this.instance
-        }
-
-        return this.instance = new CacheHandler(env)
     }
 
     isValid () {
@@ -55,6 +46,18 @@ export default class CacheHandler {
         }
 
         return fs.existsSync(filename)
+    }
+
+    static async doesCacheDataFileExist() {
+        return fs.existsSync(Globals.cache_data_file)
+    }
+
+    static async getCacheDataFile () : Promise<CacheDataFile> {
+        if(!await this.doesCacheDataFileExist()) {
+            fs.writeFileSync(Globals.cache_data_file, "{}")
+        }
+
+        return await CacheDataFile.loadFromFile()
     }
 
     async getCacheFreshness () {

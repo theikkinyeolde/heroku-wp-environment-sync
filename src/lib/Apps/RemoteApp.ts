@@ -28,6 +28,10 @@ export default class RemoteApp implements AppInterface {
     domains : Domain [] = []
     sql_dump_file : string = ""
     heroku : APIClient | null = null
+    cache : CacheHandler | null = null
+
+    project_name : string = ""
+
     env : Env | null = null
 
     constructor (name : string, db_env_name? : string) {
@@ -36,6 +40,15 @@ export default class RemoteApp implements AppInterface {
         if(db_env_name) {
             this.db_env_name = db_env_name
         }
+    }
+
+    setEnv (env : Env | null) {
+        if(env != null) {
+            this.cache = new CacheHandler(env)
+        }
+
+        this.env = env
+
     }
 
     async load () {
@@ -106,9 +119,9 @@ export default class RemoteApp implements AppInterface {
     }
 
     async getDump (filename : string | null = null, use_cache = false) {
-        const cache = CacheHandler.init(this.env)
+        this.cache = new CacheHandler(this.env)
 
-        const dump_filename = await cache.getDumpFilename(filename, use_cache)
+        const dump_filename = await this.cache.getDumpFilename(filename, use_cache)
         
         if(dump_filename) {
             this.sql_dump_file = dump_filename
@@ -119,8 +132,8 @@ export default class RemoteApp implements AppInterface {
             return ""
         }
 
-        if(use_cache && await cache.doesCacheFileExist()) {
-            ux.log(`Using cached database. Updated last time: ${Colors.time(await cache.getCacheFreshness() as string)} `)
+        if(use_cache && await this.cache.doesCacheFileExist()) {
+            ux.log(`Using cached database. Updated last time: ${Colors.time(await this.cache.getCacheFreshness() as string)} `)
         } else {
             CacheHandler.status[dump_filename as string] = false
 
@@ -153,7 +166,7 @@ export default class RemoteApp implements AppInterface {
 
             CacheHandler.status[dump_filename as string] = true
 
-            fs.copyFileSync(dump_filename as string, await cache.getCacheFileName() as string)
+            fs.copyFileSync(dump_filename as string, await this.cache.getCacheFileName() as string)
         }
 
         return this.sql_dump_file
@@ -252,6 +265,17 @@ export default class RemoteApp implements AppInterface {
         }        
 
         return true
+    }
+
+    async cachedSearchesAndReplaces () {
+        if(this.cache == null) {
+            return false;
+        }
+
+        const cache_data = await this.cache.getCacheDataFile()
+        
+        console.log(cache_data)
+        
     }
 
     constructEnvList (envs : {[id : string] : string}) {

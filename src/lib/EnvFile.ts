@@ -3,6 +3,8 @@ import * as fs from 'fs'
 import ux from 'cli-ux';
 
 import DBConfig from './Structs/DBConfig';
+import Cmd from './Cmd';
+import Colors from './Colors'
 
 export default class EnvFile {
     filename : string
@@ -12,11 +14,45 @@ export default class EnvFile {
     constructor (filename : string = ".env") {
         this.filename = filename
         
-        if(fs.existsSync(filename)) {
+        if(this.exists(filename)) {
             const buf = fs.readFileSync(filename)
-            this.vars = dotenv.parse(buf)
+            
+            const data = this.preprocessEnvFile(buf.toString())
+
+            this.vars = dotenv.parse(data)
         } else {
-            ux.warn("Env file doesn't exist!")
+            ux.error(`It seems a ${Colors.file(".env")} -file doesn't exist.`)
+        }
+    }
+
+    exists(filename : string) {
+        return fs.existsSync(filename)
+    }
+
+    preprocessEnvFile (data : string) {
+        var lines = data.split("\n");
+        var output = "";
+
+        for (let l in lines) {
+            var line = lines[l].trimLeft()
+            
+            if(line.length == 0 || line[0] == "#") {
+                continue;
+            }
+            
+            output += line + "\n";
+        }
+
+        return output;
+    }
+
+    exportVars () {
+        let out = ""
+
+        for(let e in this.vars) {
+            let evar = this.vars[e]
+
+            
         }
     }
 

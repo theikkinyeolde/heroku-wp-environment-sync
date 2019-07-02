@@ -12,6 +12,10 @@ import SyncAction from '../../lib/Actions/SyncAction';
 import LocalApp from '../../lib/Apps/LocalApp';
 import Colors from '../../lib/Colors';
 import CacheHandler from '../../lib/CacheHandler';
+import Globals from '../../lib/Globals';
+import CacheDataFile, { CacheDataEnvReplaces, CacheDataProject } from '../../lib/Structs/CacheDataFile';
+import { sync } from 'glob';
+import MySQL from '../../lib/MySQL';
 
 export default class DBSyncCommand extends SyncHelperCommand {
     static description = 'say hi to an app'
@@ -19,7 +23,7 @@ export default class DBSyncCommand extends SyncHelperCommand {
     static args = [
         {
             name : "setup",
-            description : "Setup to use when syncing."
+            description : "Specify setup to use when syncing."
         }
     ]
 
@@ -29,7 +33,9 @@ export default class DBSyncCommand extends SyncHelperCommand {
         "skip-replaces" : flags.boolean(),
         "use-cache" : flags.boolean({
             default : false
-        })
+        }),
+        verbose : flags.boolean(),
+        "more-verbose" : flags.boolean()
     }
 
     async confirmProcess (sync_action : SyncAction) {
@@ -50,7 +56,7 @@ export default class DBSyncCommand extends SyncHelperCommand {
         }
     }
 
-    async runReplaces (sync_action : SyncAction) {
+    async runReplaces (sync_action : SyncAction, override_replace_cache = false) {
         const to_env_dbs = await sync_action.to_envs.getDBConfigs()
 
         ux.log()
@@ -58,7 +64,8 @@ export default class DBSyncCommand extends SyncHelperCommand {
         ux.log()
 
         for(let from_domain of sync_action.from.app.domains) {
-            for(let to_env of sync_action.to_envs.envs) {                
+            let skip_from_domain = false
+            for(let to_env of sync_action.to_envs.envs) {          
                 const mutations = [
                     from_domain.host,
                     from_domain.host.replace(/ä/ig, 'a').replace(/ö/ig, 'o').replace(/ü/ig, 'u').replace(/ß/ig, 'ss')
@@ -80,7 +87,7 @@ export default class DBSyncCommand extends SyncHelperCommand {
                 ux.action.start(`Replace ${Colors.domain(from_domain.host)} -domain`)
     
                 let amount = 0
-
+                               
                 for(let replacement_from of replacements) {
 
                     let url = new ParsedURL(((replacement_from.prefix) ? replacement_from.prefix + "://" : 'http://') +replacement_from.host)
@@ -95,8 +102,9 @@ export default class DBSyncCommand extends SyncHelperCommand {
 
                     ux.action.status = `Replacing ${Colors.replace(from)} to ${Colors.replace(replace_to_text)}`
 
-                    amount += parseInt(await WP.runReplaceCommand(from, replace_to_text) as string)
-                    
+                    let amount_of_replaces = parseInt(await WP.runReplaceCommand(from, replace_to_text) as string)
+
+                    amount += amount_of_replaces
                 }
 
                 ux.action.stop(`${((amount) ? Colors.success(`${amount} replacements executed!`) : Colors.fail(`Didn't execute any replacements.`))}`)
@@ -113,19 +121,44 @@ export default class DBSyncCommand extends SyncHelperCommand {
     async run() {
         this.printLogo()
 
+        let cache_file = new CacheDataFile()
+        cache_file.projects["TEST"] = new CacheDataProject("TEST")
+        cache_file.projects["TEST"].replaces.push(new CacheDataEnvReplaces("perse", "paska", [
+            "www.perse.com"
+        ]))
+
+        let json = JSON.stringify(cache_file)
+
+        console.log(json)
+
+        cache_file = Object.assign(new CacheDataFile, JSON.parse(json))
+
+        console.log(cache_file.projects["TEST"].replaces)
+
+        return
+
         const { flags, args } = this.parse(DBSyncCommand)
+
+        if(flags.verbose && !flags["more-verbose"]) {
+            Globals.verbose_level = 1
+        } else if (flags["more-verbose"]) {
+            Globals.verbose_level = 2
+        }
 
         const syncfile = await Syncfile.fromFile(this.heroku)
 
-        if(!args.setup && !flags.from && !flags.to) {
+        await MySQL.toolExists()
+        await WP.toolExists()
+
+        if(!args.setup) {
 
             let setup_list = "";
 
             for(let setup of syncfile.setups) {
-                setup_list += `* ${setup.name}\n`
+                setup_list += `  * ${setup.name}\n`
             }
 
-            ux.error(`\nSetups available:\n   ${setup_list}\nNo setup specified and also no [from] and [to] flags specified. Exiting...\n`)
+            ux.error(`\nSetups available:\n${setup_list}\nNo setup specified and also no [from] and [to] flags specified. Exiting...\n`)
         }
 
         const setup = await syncfile.getSetupWithName(args.setup) as Setup
@@ -139,7 +172,7 @@ export default class DBSyncCommand extends SyncHelperCommand {
         await sync_action.runMutableChecks();
 
         // Confirm the whole process
-        await this.confirmProcess(sync_action)
+        //await this.confirmProcess(sync_action)
 
         // Start the process and the clock
         await this.startProcess()

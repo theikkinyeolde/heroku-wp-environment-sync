@@ -45,6 +45,14 @@ export default class Colors {
         return color.bgCyanBright(color.black(msg))
     }
 
+    static hidden (msg : string) {
+        return color.gray(msg)
+    }
+
+    static error (msg : string) {
+        return color.red(msg)
+    }
+
     static time (msg : string) {
         const c = color.rgb(50, 159, 95)
 

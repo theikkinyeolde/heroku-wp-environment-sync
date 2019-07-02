@@ -18,7 +18,10 @@ export default class LocalApp implements AppInterface {
     db_env_name = ""
     db_config : DBConfig
     sql_dump_file : string = ""
+    project_name : string = ""
+
     env : Env | null = null
+    cache : CacheHandler | null = null
 
     constructor (url : string) {
         this.name = "localhost"
@@ -27,6 +30,14 @@ export default class LocalApp implements AppInterface {
 
         var env_file = new EnvFile()
         this.db_config = env_file.getDBConfig()
+    }
+
+    setEnv(env : Env | null) {
+        if(env != null) {
+            this.cache = new CacheHandler(env)
+        }
+
+        this.env = env        
     }
 
     async getDump (filename : string | null = null, use_cache = false) {

@@ -3,6 +3,7 @@ import ux from 'cli-ux'
 
 import MySQL from '../MySQL';
 import Colors from '../Colors';
+import Cmd from '../Cmd';
 
 export default class DBConfig {
     name : string = ""
@@ -32,7 +33,7 @@ export default class DBConfig {
     }
 
     authString () {
-        return `-u${this.username} ${((this.password) ? '-p' + this.password : '')} -h${this.host} --port=${this.port}`
+        return `-u"${this.username}" -h"${this.host}" --port="${this.port}"`
     }
 
     toURL () {
@@ -50,8 +51,15 @@ export default class DBConfig {
         }
 
         additional_arguments.push("--single-transaction")
+        additional_arguments.push("--set-gtid-purged=OFF")
         additional_arguments.push("--quick")
 
-        return `mysqldump ${this.authString()} ${additional_arguments.join(" ")} ${this.name}`
+        let password_prefix = ""
+
+        if(this.password) {
+            password_prefix = `export MYSQL_PWD="${this.password}"`
+        }
+
+        return `${password_prefix} && mysqldump ${this.authString()} ${additional_arguments.join(" ")} ${this.name}`
     }
 }

@@ -44,11 +44,15 @@ export default class Syncfile {
         return sync_file
     }
 
+    async exists (filename = this.filename) {
+        return fs.existsSync(filename)
+    }
+
     async loadFromFile (filename = this.filename) {
-        if(!fs.existsSync(filename)) {
+        if(!await this.exists(filename)) {
             ux.error(`Syncfile doesn't exist! Create it using the ${Colors.cmd("heroku sync:init")} -command.`)
         }
-
+        
         const data = require(`${process.cwd()}/${this.filename}`)
 
         this.name = data.name
@@ -63,18 +67,20 @@ export default class Syncfile {
             let env = data.environments[e]
 
             let new_app : AppInterface
-            
+
             if(env.options && env.options.is_local && env.url) {
                 new_app = new LocalApp(env.url)
             } else {
                 new_app = new RemoteApp(env.app, env.db_env_name)
             }
+
+            new_app.project_name = this.name
             
             let new_env = new Env(e, env.mutable, new_app, env.options)
             
-            await new_app.load()
+            new_app.setEnv(new_env)
 
-            new_app.env = new_env
+            await new_app.load()
 
             if(env.replacer && env.replacer instanceof Function) {
                 new_env.replacer = env.replacer
@@ -87,11 +93,11 @@ export default class Syncfile {
     async envFromApp (name : string, app : AppInterface, mutable = false, options ? : EnvOptions) {
         let new_env = new Env(name, mutable, app, options)
 
+        app.setEnv(new_env)
+
         await app.load()
 
         this.environments.push(new_env)
-
-        app.env = new_env
 
         return new_env
     }
