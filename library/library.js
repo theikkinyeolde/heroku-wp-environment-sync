@@ -21,7 +21,7 @@ const syncfilename              = 'syncfile';
 const syncfilelocal             = '.local.syncfile';
 const syncenvlocalfile          = '.synclocal';
 const needed_sync_file_version  = '0.2.3'
-const valid_database_envs       = ['JAWSDB_URL', 'CLEARDB_DATABASE_URL'];
+const valid_database_envs       = ['DATABASE_URL', 'JAWSDB_URL', 'CLEARDB_DATABASE_URL'];
 const home_sync_dir_name        = '.heroku-wp-environment-sync';
 const user_config_filename      = 'user_config.json';
 
